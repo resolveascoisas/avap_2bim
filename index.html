@@ -11,15 +11,8 @@
 
         :root {
             --primary: #0f172a; --secondary: #334155; --accent: #3b82f6; --bg: #f8fafc; --border: #e2e8f0;
-            
-            /* Tons Vivos de Semáforo */
-            --red-vivid: #dc2626;    
-            --yellow-vivid: #facc15; 
-            --green-vivid: #16a34a;  
-            
-            --red-text: white;
-            --yellow-text: black;
-            --green-text: white;
+            --red-vivid: #dc2626; --yellow-vivid: #facc15; --green-vivid: #16a34a;  
+            --red-text: white; --yellow-text: black; --green-text: white;
             --blue-bg: #e0f2fe; --blue-text: #0369a1;
         }
 
@@ -44,7 +37,7 @@
         .controls select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'Inter'; font-size: 14px; min-width: 250px; outline: none; cursor: pointer; }
 
         .table-wrapper { overflow-x: auto; margin-bottom: 30px; border-radius: 8px; border: 1px solid var(--border); }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; min-width: 1000px;}
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; min-width: 1000px;}
         
         .data-table th, .data-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 3px; text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
@@ -59,11 +52,17 @@
         .col-total { font-weight: 700; border-left: 2px solid #94a3b8 !important; }
         .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; cursor: default; }
 
+        /* Cores das Células */
         .cell-red { background-color: var(--red-vivid) !important; color: var(--red-text) !important; font-weight: 700; }
         .cell-yellow { background-color: var(--yellow-vivid) !important; color: var(--yellow-text) !important; font-weight: 700; }
         .cell-green { background-color: var(--green-vivid) !important; color: var(--green-text) !important; font-weight: 700; }
         .cell-blue { background: var(--blue-bg) !important; color: var(--blue-text) !important; font-weight: 700; }
         .cell-empty { background: #f8fafc; color: #cbd5e1; }
+
+        /* Célula Interativa (Clique para ver Rank) */
+        .interactive-cell { cursor: pointer; transition: transform 0.1s; }
+        .interactive-cell:hover { filter: brightness(0.9); transform: scale(0.98); }
+        .rank-text { font-size: 10.5px; font-weight: 600; line-height: 1.2; }
 
         .chart-container { position: relative; height: 400px; width: 100%; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
 
@@ -95,7 +94,7 @@
 <div id="loadingOverlay">
     <div class="spinner" id="loadingSpinner"></div>
     <div id="loadingText">Sincronizando Base de Dados...</div>
-    <div id="loadingSubtext" style="font-size: 14px; font-weight: 400; color: var(--secondary); margin-top: 10px; max-width: 600px;">Aguarde, conectando com as escolas.</div>
+    <div id="loadingSubtext" style="font-size: 13px; font-weight: 400; color: var(--secondary); margin-top: 10px; max-width: 600px;">Aguarde, conectando com as escolas.</div>
 </div>
 
 <div class="dashboard-container">
@@ -104,7 +103,7 @@
             <img src="imagens/logo-ure-avare-site.png" alt="Logo URE Avaré" class="logo-img no-print" onerror="this.style.display='none'">
             <div class="header-text">
                 <h1>Painel Analítico AVAP</h1>
-                <p>Análise de Desempenho e Participação - Clique nos títulos para ordenar</p>
+                <p>Análise de Desempenho - <b>Dica: Clique sobre a % para ver a colocação da turma!</b></p>
             </div>
         </div>
         <button class="tab-btn btn-print no-print" onclick="window.print()">🖨️ Imprimir (Paisagem)</button>
@@ -167,28 +166,32 @@
     let matriculasTurmasGlobais = {}; 
     let disciplinasGlobais = new Set();
     
+    // VARIÁVEIS DO NOVO MOTOR DE RANKING GLOBAL
+    let rankingGlobaisEscolas = [];
+    let rankingGlobaisTurmas = [];
+    
     let modoAtual = 'GERAL';
     let chartInstance = null;
-    
     let currentSortCol = 'media'; 
     let currentSortDir = 'desc';  
     let currentData = [];        
     let totaisGlobais = {}; 
 
     window.onload = async () => {
-        // VERIFICAÇÃO DE SEGURANÇA LOCAL
         if (window.location.protocol === 'file:') {
             document.getElementById('loadingSpinner').style.display = 'none';
             document.getElementById('loadingText').innerText = "Acesso Local Bloqueado pelo Navegador";
-            document.getElementById('loadingSubtext').innerHTML = "<span style='color:#dc2626; font-weight:bold;'>Erro:</span> Você abriu o arquivo index.html dando dois cliques no computador.<br>Para ler os arquivos Excel, você <b>precisa subir esta pasta para o GitHub Pages</b> ou usar um Servidor Local (ex: extensão Live Server do VSCode).";
+            document.getElementById('loadingSubtext').innerHTML = "<span style='color:#dc2626; font-weight:bold;'>Erro:</span> Você abriu o arquivo index.html dando dois cliques no computador.<br>Para ler os arquivos Excel, você <b>precisa subir esta pasta para o GitHub Pages</b> ou usar um Servidor Local.";
             return;
         }
-
         try {
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_REDE, matriculasRede, 'escola');
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_TURMA, matriculasTurmasGlobais, 'turma');
             await carregarTodasPlanilhasExcel();
             
+            // Pré-processa os rankings para os cliques!
+            preCalcularTodosRankings();
+
             const select = document.getElementById('escolaSelect');
             CONFIG.ESCOLAS.forEach(nome => {
                 if (dadosEscolasCache[nome]) select.innerHTML += `<option value="${nome}">${nome}</option>`;
@@ -213,28 +216,21 @@
     async function carregarMatriculasGerais(url, targetObj, tipo) {
         try {
             const buffer = await fetchAsArrayBuffer(url);
-            // Uso correto para leitura binária de XLSX
             const workbook = XLSX.read(new Uint8Array(buffer), {type: 'array'});
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(sheet, {defval: ""});
             
             jsonData.forEach(row => {
                 const keys = Object.keys(row);
-                // Procura cabeçalho que pareça com "escola" ou "turma"
                 let keyName = keys.find(k => k.toLowerCase().includes(tipo)) || keys[0];
-                // Procura cabeçalho de matrícula
                 let keyMatricula = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('total')) || keys[keys.length - 1];
-                
                 if (row[keyName] && row[keyMatricula]) {
                     let strLimpa = String(row[keyName]).toUpperCase().trim();
-                    if (tipo === 'escola') strLimpa = strLimpa.replace(/\s*-\s*\d+$/, '').trim(); // Remove códigos no fim
-                    
+                    if (tipo === 'escola') strLimpa = strLimpa.replace(/\s*-\s*\d+$/, '').trim(); 
                     targetObj[strLimpa] = parseInt(row[keyMatricula]) || 0;
                 }
             });
-        } catch(e) {
-            console.warn(`Arquivo de matrículas [${url}] falhou. A participação será 100%.`, e);
-        }
+        } catch(e) { console.warn(`Aviso de matrícula [${url}]`, e); }
     }
 
     async function carregarTodasPlanilhasExcel() {
@@ -242,16 +238,13 @@
             const nomeEscola = CONFIG.ESCOLAS[i];
             const url = `dados/${nomeEscola}.xlsx`;
             document.getElementById('loadingSubtext').innerText = `Processando: ${nomeEscola} (${i+1}/${CONFIG.ESCOLAS.length})`;
-            
             try {
                 const buffer = await fetchAsArrayBuffer(url);
                 const workbook = XLSX.read(new Uint8Array(buffer), {type: 'array'});
                 let turmasData = [];
-
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ""});
                     if (sheetData.length === 0) return;
-                    
                     const classCol = Object.keys(sheetData[0])[0];
                     sheetData.forEach(row => {
                         if (row[classCol] && row["Total de Alunos"]) {
@@ -266,18 +259,122 @@
                     });
                 });
                 if (turmasData.length > 0) dadosEscolasCache[nomeEscola] = turmasData;
-            } catch(e) {
-                console.error(`Falha ao ler Excel de ${nomeEscola}:`, e);
-            }
+            } catch(e) { console.error(`Falha: ${nomeEscola}`, e); }
         }
     }
+
+    // ==============================================================================
+    // MOTOR DE PRÉ-CÁLCULO DE RANKINGS (Para gerar o texto URE 4/240; UE 1/6)
+    // ==============================================================================
+    function preCalcularTodosRankings() {
+        const discArray = Array.from(disciplinasGlobais).sort();
+        
+        // 1. Processa TODAS AS TURMAS de TODAS AS ESCOLAS de uma vez
+        Object.keys(dadosEscolasCache).forEach(escola => {
+            let turmasMap = {};
+            dadosEscolasCache[escola].forEach(row => {
+                const tNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
+                const pres = parseInt(row["Total de Alunos"]) || 0;
+                
+                if (!turmasMap[tNome]) {
+                    turmasMap[tNome] = { escola: escola, turma: tNome, pres: pres, acertos: 0, possiveis: 0, disc: {} };
+                    discArray.forEach(d => turmasMap[tNome].disc[d] = { acertos: 0, possiveis: 0, pct: -1 });
+                }
+                
+                Object.keys(row).forEach(h => {
+                    if (h.includes("Acertos em")) {
+                        const dNome = h.match(/Acertos em (.*?)\s*\(/)[1].trim();
+                        const acertos = parseInt(row[h]) || 0;
+                        const possiveis = pres * calcularQtdQuestoes(h);
+                        if (turmasMap[tNome].disc[dNome]) {
+                            turmasMap[tNome].disc[dNome].acertos += acertos;
+                            turmasMap[tNome].disc[dNome].possiveis += possiveis;
+                        }
+                        turmasMap[tNome].acertos += acertos;
+                        turmasMap[tNome].possiveis += possiveis;
+                    }
+                });
+            });
+
+            // Fecha o calculo e insere na lista mestre de turmas
+            Object.keys(turmasMap).forEach(tNome => {
+                let t = turmasMap[tNome];
+                let mat = matriculasTurmasGlobais[tNome] || t.pres;
+                const chaveAprx = Object.keys(matriculasTurmasGlobais).find(k => k.includes(tNome) || tNome.includes(k));
+                if(chaveAprx && !matriculasTurmasGlobais[tNome]) mat = matriculasTurmasGlobais[chaveAprx];
+
+                t.pctPart = mat > 0 ? Math.min((t.pres / mat) * 100, 100) : 100;
+                t.mediaGeral = t.possiveis > 0 ? (t.acertos / t.possiveis) * 100 : -1;
+                discArray.forEach(d => { if(t.disc[d].possiveis > 0) t.disc[d].pct = (t.disc[d].acertos / t.disc[d].possiveis) * 100; });
+                
+                rankingGlobaisTurmas.push(t);
+            });
+        });
+
+        // 2. Processa TODAS AS ESCOLAS (Agrupado)
+        Object.keys(dadosEscolasCache).forEach(escola => {
+            let e = { nome: escola, pres: 0, acertos: 0, possiveis: 0, disc: {} };
+            discArray.forEach(d => e.disc[d] = { acertos: 0, possiveis: 0, pct: -1 });
+            
+            let tCache = rankingGlobaisTurmas.filter(t => t.escola === escola);
+            tCache.forEach(t => {
+                e.pres += t.pres; e.acertos += t.acertos; e.possiveis += t.possiveis;
+                discArray.forEach(d => { e.disc[d].acertos += t.disc[d].acertos; e.disc[d].possiveis += t.disc[d].possiveis; });
+            });
+            
+            let mat = matriculasRede[escola] || e.pres;
+            e.pctPart = mat > 0 ? Math.min((e.pres / mat) * 100, 100) : 100;
+            e.mediaGeral = e.possiveis > 0 ? (e.acertos / e.possiveis) * 100 : -1;
+            discArray.forEach(d => { if(e.disc[d].possiveis > 0) e.disc[d].pct = (e.disc[d].acertos / e.disc[d].possiveis) * 100; });
+            rankingGlobaisEscolas.push(e);
+        });
+    }
+
+    // Função Auxiliar para descobrir Rank a qualquer momento
+    function getRank(listaMestre, itemNome, valorProcurado, tipoBusca, field) {
+        if(valorProcurado === -1) return "-";
+        let validos = [];
+        
+        // Filtra os válidos e pega a propriedade correta
+        listaMestre.forEach(item => {
+            let v = -1;
+            if (field === 'mediaGeral') v = item.mediaGeral;
+            else if (field === 'pctPart') v = item.pctPart;
+            else v = item.disc[field].pct;
+            
+            if (v !== -1) validos.push({ nome: (tipoBusca === 'escola' ? item.nome : item.turma), val: v });
+        });
+
+        // Ordena
+        validos.sort((a,b) => b.val - a.val);
+
+        // Acha a colocação (lidando com empates)
+        let rank = 1;
+        for (let i = 0; i < validos.length; i++) {
+            if (i > 0 && validos[i].val < validos[i-1].val) rank = i + 1;
+            if (validos[i].nome === itemNome) return `${rank}/${validos.length}`;
+        }
+        return "-";
+    }
+
+    // --- INTERAÇÃO NA TABELA (Clique p/ Trocar Texto) ---
+    window.toggleCellText = function(cell) {
+        const isPct = cell.getAttribute('data-showing-pct') === 'true';
+        if (isPct) {
+            cell.innerHTML = `<span class="rank-text">${cell.getAttribute('data-rank')}</span>`;
+            cell.setAttribute('data-showing-pct', 'false');
+        } else {
+            cell.innerHTML = cell.getAttribute('data-pct');
+            cell.setAttribute('data-showing-pct', 'true');
+        }
+    };
+
 
     function setModo(modo) {
         modoAtual = modo;
         document.getElementById('btnTabGeral').classList.toggle('active', modo === 'GERAL');
         document.getElementById('btnTabEscola').classList.toggle('active', modo === 'ESCOLA');
         document.getElementById('escolaControls').style.display = modo === 'ESCOLA' ? 'flex' : 'none';
-        
         resetSortAndRender();
     }
 
@@ -320,50 +417,21 @@
     }
 
     function processarDadosGeral() {
-        const discArray = Array.from(disciplinasGlobais).sort();
-        currentData = [];
+        // Aproveita o pre-cálculo feito no motor mestre!
+        currentData = [...rankingGlobaisEscolas];
         
         let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
         let globDisc = {};
+        const discArray = Array.from(disciplinasGlobais).sort();
         discArray.forEach(d => globDisc[d] = { acertos: 0, possiveis: 0 });
 
-        Object.keys(dadosEscolasCache).forEach(nome => {
-            const rawData = dadosEscolasCache[nome];
-            let escAlunos = 0, escAcertos = 0, escPossiveis = 0;
-            let escDisc = {};
-            discArray.forEach(d => escDisc[d] = { acertos: 0, possiveis: 0, pct: -1 });
-            let turmasContadas = new Set();
-
-            rawData.forEach(row => {
-                const turmaNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
-                const pres = parseInt(row["Total de Alunos"]) || 0;
-                if (!turmasContadas.has(turmaNome)) { escAlunos += pres; turmasContadas.add(turmaNome); }
-
-                Object.keys(row).forEach(h => {
-                    if (h.includes("Acertos em")) {
-                        const dNome = h.match(/Acertos em (.*?)\s*\(/)[1].trim();
-                        const acertos = parseInt(row[h]) || 0;
-                        const possiveis = pres * calcularQtdQuestoes(h);
-                        if (escDisc[dNome]) {
-                            escDisc[dNome].acertos += acertos; escDisc[dNome].possiveis += possiveis;
-                        }
-                        escAcertos += acertos; escPossiveis += possiveis;
-                    }
-                });
-            });
-
-            const matrics = matriculasRede[nome] || escAlunos;
-            const pctPart = matrics > 0 ? Math.min((escAlunos / matrics) * 100, 100) : 100;
-            const mediaGeral = escPossiveis > 0 ? (escAcertos / escPossiveis) * 100 : -1;
-
-            discArray.forEach(d => {
-                if(escDisc[d].possiveis > 0) escDisc[d].pct = (escDisc[d].acertos / escDisc[d].possiveis) * 100;
-            });
-
-            currentData.push({ nome, escAlunos, matrics, pctPart, escDisc, mediaGeral });
-            
-            globAlunos += escAlunos; globMatriculas += matrics; globAcertos += escAcertos; globPossiveis += escPossiveis;
-            discArray.forEach(d => { globDisc[d].acertos += escDisc[d].acertos; globDisc[d].possiveis += escDisc[d].possiveis; });
+        currentData.forEach(e => {
+            globAlunos += e.pres; 
+            let mat = matriculasRede[e.nome] || e.pres;
+            globMatriculas += mat; 
+            globAcertos += e.acertos; globPossiveis += e.possiveis;
+            discArray.forEach(d => { globDisc[d].acertos += e.disc[d].acertos; globDisc[d].possiveis += e.disc[d].possiveis; });
+            e.escDisc = e.disc; // Ajuste de nomenclatura p/ sort
         });
 
         totaisGlobais = { globAlunos, globMatriculas, globAcertos, globPossiveis, globDisc, discArray };
@@ -372,58 +440,28 @@
 
     function processarDadosEscola() {
         const nomeEscola = document.getElementById('escolaSelect').value;
-        if (!nomeEscola || !dadosEscolasCache[nomeEscola]) return;
+        if (!nomeEscola) return;
         
-        const rawData = dadosEscolasCache[nomeEscola];
-        const discArray = Array.from(disciplinasGlobais).sort();
-        currentData = [];
-        let turmasMap = {};
-
-        rawData.forEach(row => {
-            const tNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
-            const pres = parseInt(row["Total de Alunos"]) || 0;
-            
-            if (!turmasMap[tNome]) {
-                turmasMap[tNome] = { pres: pres, acertos: 0, possiveis: 0, escDisc: {} };
-                discArray.forEach(d => turmasMap[tNome].escDisc[d] = { acertos: 0, possiveis: 0, pct: -1 });
-            }
-
-            Object.keys(row).forEach(h => {
-                if (h.includes("Acertos em")) {
-                    const dNome = h.match(/Acertos em (.*?)\s*\(/)[1].trim();
-                    const acertos = parseInt(row[h]) || 0;
-                    const possiveis = pres * calcularQtdQuestoes(h);
-                    if (turmasMap[tNome].escDisc[dNome]) {
-                        turmasMap[tNome].escDisc[dNome].acertos += acertos;
-                        turmasMap[tNome].escDisc[dNome].possiveis += possiveis;
-                    }
-                    turmasMap[tNome].acertos += acertos;
-                    turmasMap[tNome].possiveis += possiveis;
-                }
-            });
-        });
-
+        currentData = rankingGlobaisTurmas.filter(t => t.escola === nomeEscola);
+        
         let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
         let globDisc = {};
+        const discArray = Array.from(disciplinasGlobais).sort();
         discArray.forEach(d => globDisc[d] = { acertos: 0, possiveis: 0 });
 
-        Object.keys(turmasMap).forEach(tNome => {
-            const t = turmasMap[tNome];
-            let mat = matriculasTurmasGlobais[tNome];
-            if (!mat) {
-                const chaveAprx = Object.keys(matriculasTurmasGlobais).find(k => k.includes(tNome) || tNome.includes(k));
-                mat = chaveAprx ? matriculasTurmasGlobais[chaveAprx] : t.pres;
-            }
-
-            const pctPart = mat > 0 ? Math.min((t.pres / mat) * 100, 100) : 100;
-            const mediaGeral = t.possiveis > 0 ? (t.acertos / t.possiveis) * 100 : -1;
+        currentData.forEach(t => {
+            globAlunos += t.pres; 
             
-            discArray.forEach(d => { if(t.escDisc[d].possiveis > 0) t.escDisc[d].pct = (t.escDisc[d].acertos / t.escDisc[d].possiveis) * 100; });
-
-            currentData.push({ nome: tNome, escAlunos: t.pres, matrics: mat, pctPart, escDisc: t.escDisc, mediaGeral });
-
-            globAlunos += t.pres; globMatriculas += mat; globAcertos += t.acertos; globPossiveis += t.possiveis;
-            discArray.forEach(d => { globDisc[d].acertos += t.escDisc[d].acertos; globDisc[d].possiveis += t.escDisc[d].possiveis; });
+            let mat = matriculasTurmasGlobais[t.turma] || t.pres;
+            const chaveAprx = Object.keys(matriculasTurmasGlobais).find(k => k.includes(t.turma) || t.turma.includes(k));
+            if(chaveAprx && !matriculasTurmasGlobais[t.turma]) mat = matriculasTurmasGlobais[chaveAprx];
+            
+            globMatriculas += mat; 
+            globAcertos += t.acertos; globPossiveis += t.possiveis;
+            discArray.forEach(d => { globDisc[d].acertos += t.disc[d].acertos; globDisc[d].possiveis += t.disc[d].possiveis; });
+            
+            t.nome = t.turma; // Ajuste de nomenclatura
+            t.escDisc = t.disc; 
         });
 
         totaisGlobais = { globAlunos, globMatriculas, globAcertos, globPossiveis, globDisc, discArray };
@@ -434,15 +472,14 @@
         currentData.sort((a, b) => {
             let valA, valB;
             if (currentSortCol === 'nome') { valA = a.nome; valB = b.nome; }
-            else if (currentSortCol === 'pres') { valA = a.escAlunos; valB = b.escAlunos; }
-            else if (currentSortCol === 'mat') { valA = a.matrics; valB = b.matrics; }
+            else if (currentSortCol === 'pres') { valA = a.pres; valB = b.pres; }
+            else if (currentSortCol === 'mat') { valA = (modoAtual==='GERAL'? (matriculasRede[a.nome]||a.pres) : (matriculasTurmasGlobais[a.nome]||a.pres)); valB = (modoAtual==='GERAL'? (matriculasRede[b.nome]||b.pres) : (matriculasTurmasGlobais[b.nome]||b.pres)); }
             else if (currentSortCol === 'part') { valA = a.pctPart; valB = b.pctPart; }
             else if (currentSortCol === 'media') { valA = a.mediaGeral; valB = b.mediaGeral; }
             else { valA = a.escDisc[currentSortCol].pct; valB = b.escDisc[currentSortCol].pct; }
 
             if (valA === valB) return a.nome.localeCompare(b.nome);
             if (typeof valA === 'string') return currentSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            
             if (valA === -1) return 1; if (valB === -1) return -1;
             return currentSortDir === 'asc' ? valA - valB : valB - valA;
         });
@@ -451,9 +488,21 @@
     function renderHeaderCell(key, label, width = "auto") {
         const icone = currentSortCol === key ? (currentSortDir === 'asc' ? '▲' : '▼') : '↕';
         const activeClass = currentSortCol === key ? 'th-active' : '';
-        return `<th style="width: ${width};" class="${activeClass}" onclick="handleSort('${key}')" title="Ordenar por ${label.replace('<br>',' ')}">
+        return `<th style="width: ${width};" class="${activeClass}" onclick="handleSort('${key}')" title="Ordenar por ${label.replace(/<br>/g,' ')}">
                     ${label} <span class="sort-icon">${icone}</span>
                 </th>`;
+    }
+
+    function generateCellHTML(pctStr, rankUre, rankUe, semaforoClass) {
+        if (pctStr === "-") return `<td class="cell-empty">-</td>`;
+        
+        let rankStr = modoAtual === 'GERAL' ? `URE ${rankUre}` : `URE ${rankUre}<br>UE ${rankUe}`;
+        
+        return `<td class="${semaforoClass} interactive-cell" title="Clique para ver o Rank na Rede!" 
+                    data-showing-pct="true" 
+                    data-pct="${pctStr}" 
+                    data-rank="${rankStr}" 
+                    onclick="toggleCellText(this)">${pctStr}</td>`;
     }
 
     function renderizarTabelaEGratico() {
@@ -463,7 +512,7 @@
         let htmlRows = "";
         let labels = [], dataPcts = [], bgColors = [];
 
-        let clas = 0, pVal = null, pClas = 0;
+        let clas = 0, pClas = 0;
 
         currentData.forEach((e, index) => {
             clas = index + 1;
@@ -472,29 +521,49 @@
                 let cVal, pValObj;
                 let prevObj = currentData[index - 1];
                 
-                if (currentSortCol === 'pres') { cVal = e.escAlunos; pValObj = prevObj.escAlunos; }
-                else if (currentSortCol === 'mat') { cVal = e.matrics; pValObj = prevObj.matrics; }
+                if (currentSortCol === 'pres') { cVal = e.pres; pValObj = prevObj.pres; }
+                else if (currentSortCol === 'mat') { cVal = (modoAtual==='GERAL'? (matriculasRede[e.nome]||e.pres) : (matriculasTurmasGlobais[e.nome]||e.pres)); pValObj = (modoAtual==='GERAL'? (matriculasRede[prevObj.nome]||prevObj.pres) : (matriculasTurmasGlobais[prevObj.nome]||prevObj.pres)); }
                 else if (currentSortCol === 'part') { cVal = e.pctPart; pValObj = prevObj.pctPart; }
                 else if (currentSortCol === 'media') { cVal = e.mediaGeral; pValObj = prevObj.mediaGeral; }
                 else { cVal = e.escDisc[currentSortCol].pct; pValObj = prevObj.escDisc[currentSortCol].pct; }
 
-                if (cVal === pValObj) clas = pClas; 
-                else pClas = clas; 
+                if (cVal === pValObj) clas = pClas; else pClas = clas; 
             } else { pClas = clas; }
+
+            // Lógica de Rank da Linha Específica
+            let matrics = modoAtual === 'GERAL' ? (matriculasRede[e.nome]||e.pres) : (matriculasTurmasGlobais[e.nome]||e.pres);
+            
+            // Calcula Rank de Participação
+            let rUrePart = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.pctPart, 'escola', 'pctPart') : getRank(rankingGlobaisTurmas, e.nome, e.pctPart, 'turma', 'pctPart');
+            let rUePart = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.pctPart, 'turma', 'pctPart'); // Dentro da própria escola
+            
+            let partPctStr = e.pctPart.toFixed(1).replace('.',',') + "%";
+            let partHtml = generateCellHTML(partPctStr, rUrePart, rUePart, "cell-blue");
 
             htmlRows += `<tr>
                 <td class="col-clas">${currentSortCol === 'nome' ? clas : clas + 'º'}</td>
                 <td class="col-text">${e.nome}</td>
-                <td>${e.escAlunos}</td>
-                <td>${e.matrics === e.escAlunos ? "-" : e.matrics}</td>
-                <td class="cell-blue">${e.pctPart.toFixed(1).replace('.',',')}%</td>`;
+                <td>${e.pres}</td>
+                <td>${matrics === e.pres ? "-" : matrics}</td>
+                ${partHtml}`;
 
             dArr.forEach(d => {
                 const pct = e.escDisc[d].pct;
-                htmlRows += `<td class="${getSemaforoClass(pct)}">${pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%"}</td>`;
+                let pctStr = pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%";
+                
+                let rUre = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, pct, 'escola', d) : getRank(rankingGlobaisTurmas, e.nome, pct, 'turma', d);
+                let rUe = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, pct, 'turma', d);
+                
+                htmlRows += generateCellHTML(pctStr, rUre, rUe, getSemaforoClass(pct));
             });
 
-            htmlRows += `<td class="col-total ${getSemaforoClass(e.mediaGeral)}">${e.mediaGeral === -1 ? "-" : e.mediaGeral.toFixed(1).replace('.',',')+"%"}</td></tr>`;
+            // Média Geral
+            let mgStr = e.mediaGeral === -1 ? "-" : e.mediaGeral.toFixed(1).replace('.',',')+"%";
+            let rUreMg = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.mediaGeral, 'escola', 'mediaGeral') : getRank(rankingGlobaisTurmas, e.nome, e.mediaGeral, 'turma', 'mediaGeral');
+            let rUeMg = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.mediaGeral, 'turma', 'mediaGeral');
+            
+            htmlRows += generateCellHTML(mgStr, rUreMg, rUeMg, "col-total " + getSemaforoClass(e.mediaGeral));
+            htmlRows += `</tr>`;
             
             labels.push(modoAtual === 'GERAL' ? e.nome.split(' ').slice(0,2).join(' ') : e.nome.replace(/(INTEGRAL|MANHA|TARDE|ANUAL|T1|T2|7H|9H|\-|\d{8,})/g, '').trim().substring(0,12));
             
@@ -543,7 +612,6 @@
         let chartTitle = "Média Geral (%)";
         if (disciplinasGlobais.has(currentSortCol)) chartTitle = `Desempenho em ${currentSortCol} (%)`;
         else if (currentSortCol === 'part') chartTitle = "Taxa de Participação (%)";
-        
         if (modoAtual === 'ESCOLA') chartTitle += ` - ${document.getElementById('escolaSelect').value}`;
 
         desenharGrafico(labels, dataPcts, bgColors, chartTitle);
