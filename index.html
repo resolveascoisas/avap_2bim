@@ -102,7 +102,7 @@
             <img src="imagens/logo-ure-avare-site.png" alt="Logo URE Avaré" class="logo-img no-print" onerror="this.style.display='none'">
             <div class="header-text">
                 <h1>Painel Analítico AVAP</h1>
-                <p>Análise de Desempenho - <b>Dica: Clique sobre a % para ver a colocação da turma no mesmo ano/série!</b></p>
+                <p>Análise de Desempenho - <b>Dica: Clique sobre a % para ver a colocação no mesmo ano/série!</b></p>
             </div>
         </div>
         <button class="tab-btn btn-print no-print" onclick="window.print()">🖨️ Imprimir (Paisagem)</button>
@@ -147,7 +147,6 @@
 
 <script>
     const CONFIG = {
-        // Garantir que a extensão seja .xlsx (padrão)
         ARQUIVO_MATRICULAS_REDE: "dados/AVARE.xlsx",    
         ARQUIVO_MATRICULAS_TURMA: "dados/ESCOLAS.xlsx", 
         ESCOLAS: [
@@ -183,8 +182,7 @@
     let matriculasTurmasGlobais = {}; 
     let disciplinasGlobais = new Set();
     
-    // AQUI ESTAVA O PROBLEMA ANTES - Agora declarados corretamente:
-    let rankingGlobaisEscolas = []; 
+    let rankingGlobaisEscolas = [];
     let rankingGlobaisTurmas = [];
     
     let modoAtual = 'GERAL';
@@ -198,9 +196,10 @@
         if (window.location.protocol === 'file:') {
             document.getElementById('loadingSpinner').style.display = 'none';
             document.getElementById('loadingText').innerText = "Acesso Local Bloqueado pelo Navegador";
-            document.getElementById('loadingSubtext').innerHTML = "<span style='color:#dc2626; font-weight:bold;'>Erro:</span> Você abriu o arquivo index.html dando dois cliques no computador.<br>Para ler os arquivos Excel, você <b>precisa subir esta pasta para o GitHub Pages</b> ou usar um Servidor Local.";
+            document.getElementById('loadingSubtext').innerHTML = "<span style='color:#dc2626; font-weight:bold;'>Erro:</span> Você abriu o arquivo index.html dando dois cliques no computador.<br>Para o painel rodar com segurança, você <b>precisa subir esta pasta para o GitHub Pages</b> ou usar um Servidor Local (Live Server).";
             return;
         }
+
         try {
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_REDE, matriculasRede, 'escola');
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_TURMA, matriculasTurmasGlobais, 'turma');
@@ -218,13 +217,14 @@
         } catch (e) {
             document.getElementById('loadingSpinner').style.display = 'none';
             document.getElementById('loadingText').innerText = "Erro Crítico ao carregar dados";
-            document.getElementById('loadingSubtext').innerText = "Verifique se os arquivos Excel estão exatamente dentro da pasta 'dados/' com os nomes corretos.";
+            document.getElementById('loadingSubtext').innerText = "Abra o console (F12) para ver detalhes. Certifique-se de que os nomes dos arquivos Excel batem exatamente com a lista.";
             console.error(e);
         }
     };
 
+    // ADICIONADO ENCODEURI PARA PREVENIR ERROS DE ESPAÇOS EM NOMES DE ARQUIVOS
     async function fetchAsArrayBuffer(url) {
-        const resp = await fetch(url);
+        const resp = await fetch(encodeURI(url));
         if (!resp.ok) throw new Error(`Arquivo não encontrado: ${url}`);
         return await resp.arrayBuffer();
     }
@@ -246,7 +246,7 @@
                     targetObj[strLimpa] = parseInt(row[keyMatricula]) || 0;
                 }
             });
-        } catch(e) { console.warn(`Aviso de matrícula [${url}]`, e); }
+        } catch(e) { console.warn(`Aviso de leitura de matrícula [${url}]`, e); }
     }
 
     async function carregarTodasPlanilhasExcel() {
@@ -279,7 +279,7 @@
         }
     }
 
-    // CLASSIFICAÇÃO INTELIGENTE DE TURMAS
+    // CLASSIFICAÇÃO INTELIGENTE DE TURMAS (Etapa)
     function classificarEtapa(turma) {
         let t = turma.toUpperCase();
         if (t.includes('ANO')) return 'EFAF';
@@ -292,6 +292,7 @@
         return 'OUTROS';
     }
 
+    // EXTRAI O ANO/SÉRIE PARA COMPARAÇÃO JUSTA
     function extrairAnoSerie(nome) {
         const match = nome.match(/([1-9][º°ªa-z]*\s*(?:ANO|S[EÉ]RIE))/i);
         if (match) return match[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -301,7 +302,6 @@
     function preCalcularTodosRankings() {
         const discArray = Array.from(disciplinasGlobais).sort();
         
-        // Limpa os arrays para evitar duplicidade se rodar mais de uma vez
         rankingGlobaisTurmas = [];
         rankingGlobaisEscolas = [];
 
@@ -374,7 +374,7 @@
         });
     }
 
-    // GERA RANKING CONSIDERANDO OS FILTROS E SÉRIES
+    // CORREÇÃO CRÍTICA DO RANKING: Usa a propriedade correta (disc vs escDisc dependendo do objeto)
     function getRank(listaMestre, itemNome, valorProcurado, tipoBusca, field, anoSerieFiltro = null) {
         if(valorProcurado === -1) return "-";
         let validos = [];
@@ -385,7 +385,11 @@
             let v = -1;
             if (field === 'mediaGeral') v = item.mediaGeral;
             else if (field === 'pctPart') v = item.pctPart;
-            else v = item.disc[field] ? item.disc[field].pct : -1;
+            else {
+                // A correção de leitura está aqui: Garante que lê tanto de "disc" quanto de "escDisc"
+                const discObj = item.disc || item.escDisc;
+                if (discObj && discObj[field]) v = discObj[field].pct;
+            }
             
             if (v !== -1) validos.push({ nome: (tipoBusca === 'escola' ? item.nome : item.turma), val: v });
         });
@@ -451,6 +455,12 @@
         return "#facc15"; 
     }
 
+    function calcularQtdQuestoes(headerString) {
+        const match = headerString.match(/\((Questões.*?)\)/);
+        if (match) return (match[1].match(/,/g) || []).length + 1;
+        return 1;
+    }
+
     // APLICA FILTROS VISUAIS SOBRE AS TURMAS
     function filtrarTurmas() {
         let fEtapa = document.getElementById('etapaSelect').value;
@@ -480,7 +490,7 @@
 
         Object.keys(dadosEscolasCache).forEach(escola => {
             let tCache = turmasFiltradas.filter(t => t.escola === escola);
-            if (tCache.length === 0) return; // Pula a escola se não sobrou nenhuma turma após filtro
+            if (tCache.length === 0) return; 
 
             let e = { nome: escola, pres: 0, acertos: 0, possiveis: 0, escDisc: {} };
             discArray.forEach(d => e.escDisc[d] = { acertos: 0, possiveis: 0, pct: -1 });
@@ -499,7 +509,6 @@
                 matricsEscolaFiltrada += mat;
             });
 
-            // Se não houver filtro, puxa do arquivo mestre. Se houver, soma apenas as matrículas das turmas ativas.
             e.matrics = (fEtapa === 'TODAS' && fTurno === 'TODOS') ? (matriculasRede[escola] || e.pres) : matricsEscolaFiltrada;
             e.pctPart = e.matrics > 0 ? Math.min((e.pres / e.matrics) * 100, 100) : 100;
             e.mediaGeral = e.possiveis > 0 ? (e.acertos / e.possiveis) * 100 : -1;
@@ -585,6 +594,7 @@
         const totalRegistros = currentData.length;
         let htmlRows = "";
         let labels = [], dataPcts = [], bgColors = [];
+
         let clas = 0, pClas = 0;
 
         let listaEscolasFiltradasParaRank = modoAtual === 'GERAL' ? currentData : [];
@@ -602,9 +612,7 @@
                 if (cVal === pValObj) clas = pClas; else pClas = clas; 
             } else { pClas = clas; }
 
-            // Filtro de Série (Exclusivo para o ranking da turma)
             let anoSerieFiltro = modoAtual === 'GERAL' ? null : e.anoSerie;
-
             let listaParaRankUre = modoAtual === 'GERAL' ? listaEscolasFiltradasParaRank : filtrarTurmas();
 
             let rUrePart = getRank(listaParaRankUre, e.nome, e.pctPart, modoAtual === 'GERAL' ? 'escola' : 'turma', 'pctPart', anoSerieFiltro);
@@ -623,7 +631,6 @@
             dArr.forEach(d => {
                 const pct = e.escDisc[d].pct;
                 let pctStr = pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%";
-                
                 let rUre = getRank(listaParaRankUre, e.nome, pct, modoAtual === 'GERAL' ? 'escola' : 'turma', d, anoSerieFiltro);
                 let rUe = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, pct, 'turma', d, anoSerieFiltro);
                 htmlRows += generateCellHTML(pctStr, rUre, rUe, getSemaforoClass(pct));
