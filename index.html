@@ -114,6 +114,10 @@
     </div>
 
     <div class="controls no-print">
+        <div id="escolaControls" style="display: none;">
+            <label>Unidade Escolar:</label>
+            <select id="escolaSelect" onchange="resetSortAndRender()"></select>
+        </div>
         <div>
             <label>Etapa de Ensino:</label>
             <select id="etapaSelect" onchange="resetSortAndRender()">
@@ -131,10 +135,6 @@
                 <option value="INTEGRAL">Integral</option>
                 <option value="PARCIAL">Parcial</option>
             </select>
-        </div>
-        <div id="escolaControls" style="display: none;">
-            <label>Unidade Escolar:</label>
-            <select id="escolaSelect" onchange="resetSortAndRender()"></select>
         </div>
     </div>
 
