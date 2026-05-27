@@ -147,6 +147,7 @@
 
 <script>
     const CONFIG = {
+        // Garantir que a extensão seja .xlsx (padrão)
         ARQUIVO_MATRICULAS_REDE: "dados/AVARE.xlsx",    
         ARQUIVO_MATRICULAS_TURMA: "dados/ESCOLAS.xlsx", 
         ESCOLAS: [
@@ -182,6 +183,8 @@
     let matriculasTurmasGlobais = {}; 
     let disciplinasGlobais = new Set();
     
+    // AQUI ESTAVA O PROBLEMA ANTES - Agora declarados corretamente:
+    let rankingGlobaisEscolas = []; 
     let rankingGlobaisTurmas = [];
     
     let modoAtual = 'GERAL';
@@ -281,7 +284,6 @@
         let t = turma.toUpperCase();
         if (t.includes('ANO')) return 'EFAF';
         if (t.includes('SERIE') || t.includes('SÉRIE')) {
-            // Verifica padrões comuns de Técnico (Nomes de cursos no começo ou palavras chaves)
             if (t.match(/\d+\s*-\s*[A-ZÀ-Ú\s]+\s*-\s*\d+[ªºa-z]*\s*S[EÉ]RIE/i) || t.includes('MTEC') || t.includes('NOVOTEC') || t.includes('TÉCNICO') || t.includes('TECNICO')) {
                 return 'EM_TECNICO';
             }
@@ -290,7 +292,6 @@
         return 'OUTROS';
     }
 
-    // EXTRAI O ANO/SÉRIE PARA CRUZAMENTO JUSTO
     function extrairAnoSerie(nome) {
         const match = nome.match(/([1-9][º°ªa-z]*\s*(?:ANO|S[EÉ]RIE))/i);
         if (match) return match[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -300,6 +301,10 @@
     function preCalcularTodosRankings() {
         const discArray = Array.from(disciplinasGlobais).sort();
         
+        // Limpa os arrays para evitar duplicidade se rodar mais de uma vez
+        rankingGlobaisTurmas = [];
+        rankingGlobaisEscolas = [];
+
         Object.keys(dadosEscolasCache).forEach(escola => {
             let turmasMap = {};
             dadosEscolasCache[escola].forEach(row => {
@@ -349,6 +354,24 @@
                 rankingGlobaisTurmas.push(t);
             });
         });
+
+        Object.keys(dadosEscolasCache).forEach(escola => {
+            let e = { nome: escola, pres: 0, acertos: 0, possiveis: 0, disc: {} };
+            discArray.forEach(d => e.disc[d] = { acertos: 0, possiveis: 0, pct: -1 });
+            
+            let tCache = rankingGlobaisTurmas.filter(t => t.escola === escola);
+            tCache.forEach(t => {
+                e.pres += t.pres; e.acertos += t.acertos; e.possiveis += t.possiveis;
+                discArray.forEach(d => { e.disc[d].acertos += t.disc[d].acertos; e.disc[d].possiveis += t.disc[d].possiveis; });
+            });
+            
+            let mat = matriculasRede[escola] || e.pres;
+            e.pctPart = mat > 0 ? Math.min((e.pres / mat) * 100, 100) : 100;
+            e.mediaGeral = e.possiveis > 0 ? (e.acertos / e.possiveis) * 100 : -1;
+            discArray.forEach(d => { if(e.disc[d].possiveis > 0) e.disc[d].pct = (e.disc[d].acertos / e.disc[d].possiveis) * 100; });
+            
+            rankingGlobaisEscolas.push(e);
+        });
     }
 
     // GERA RANKING CONSIDERANDO OS FILTROS E SÉRIES
@@ -357,7 +380,6 @@
         let validos = [];
         
         listaMestre.forEach(item => {
-            // Se for busca de turma, filtra para comparar apenas com a mesma série
             if (tipoBusca === 'turma' && anoSerieFiltro && item.anoSerie !== anoSerieFiltro) return;
 
             let v = -1;
@@ -512,7 +534,7 @@
             const chaveAprx = Object.keys(matriculasTurmasGlobais).find(k => k.includes(t.turma) || t.turma.includes(k));
             if(chaveAprx && !matriculasTurmasGlobais[t.turma]) mat = matriculasTurmasGlobais[chaveAprx];
             
-            t.matrics = mat; // Adicionado para facilitar o render
+            t.matrics = mat; 
             globMatriculas += mat; 
             globAcertos += t.acertos; globPossiveis += t.possiveis;
             discArray.forEach(d => { globDisc[d].acertos += t.disc[d].acertos; globDisc[d].possiveis += t.disc[d].possiveis; });
@@ -565,7 +587,6 @@
         let labels = [], dataPcts = [], bgColors = [];
         let clas = 0, pClas = 0;
 
-        // Para os Ranks das Escolas no modo Geral, precisamos de uma lista limpa das médias de cada escola geradas após os filtros
         let listaEscolasFiltradasParaRank = modoAtual === 'GERAL' ? currentData : [];
 
         currentData.forEach((e, index) => {
@@ -581,11 +602,9 @@
                 if (cVal === pValObj) clas = pClas; else pClas = clas; 
             } else { pClas = clas; }
 
-            // Ranks Dinâmicos (Obedecendo os filtros!)
+            // Filtro de Série (Exclusivo para o ranking da turma)
             let anoSerieFiltro = modoAtual === 'GERAL' ? null : e.anoSerie;
 
-            // Se for GERAL, rankea contra as outras Escolas (já filtradas)
-            // Se for ESCOLA, rankea contra TODAS as turmas filtradas (rankingGlobaisTurmas já tem o anoSerie) 
             let listaParaRankUre = modoAtual === 'GERAL' ? listaEscolasFiltradasParaRank : filtrarTurmas();
 
             let rUrePart = getRank(listaParaRankUre, e.nome, e.pctPart, modoAtual === 'GERAL' ? 'escola' : 'turma', 'pctPart', anoSerieFiltro);
@@ -623,7 +642,6 @@
             if (disciplinasGlobais.has(currentSortCol)) chartVal = e.escDisc[currentSortCol].pct > -1 ? e.escDisc[currentSortCol].pct.toFixed(1) : 0;
             else if (currentSortCol === 'part') chartVal = e.pctPart.toFixed(1);
             else chartVal = e.mediaGeral > -1 ? e.mediaGeral.toFixed(1) : 0;
-            
             dataPcts.push(chartVal);
             
             let colorVal = e.mediaGeral;
