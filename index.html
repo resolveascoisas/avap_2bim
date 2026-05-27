@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Resultados AVAP - Rede</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --primary-color: #0f172a; 
+            --accent-color: #3b82f6;
+            --text-color: #1e293b;
+            --bg-color: #f8fafc;
+            --border-color: #cbd5e1;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; }
+        .container { max-width: 100%; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        
+        .config-section { background: #f1f5f9; border: 1px solid var(--border-color); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .full-width { grid-column: span 2; }
+        
+        input[type="text"], input[type="number"], input[type="file"], textarea, select {
+            width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #94a3b8; border-radius: 4px; box-sizing: border-box; font-family: 'Inter', sans-serif;
+        }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; margin: 0; }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .btn { background-color: var(--accent-color); color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; margin: 5px; }
+        .btn:hover { background-color: #2563eb; }
+        .btn-success { background-color: #10b981; }
+        .btn-success:hover { background-color: #059669; }
+        .btn-pdf { background-color: #dc2626; }
+        .btn-pdf:hover { background-color: #b91c1c; }
+        .btn-chart { background-color: #8b5cf6; }
+        .btn-chart:hover { background-color: #7c3aed; }
+
+        .config-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 13px; }
+        .config-table th, .config-table td { border: 1px solid #94a3b8; padding: 6px; text-align: left; vertical-align: middle; }
+        .config-table th { background: #e2e8f0; }
+
+        .doc-header { display: flex; align-items: center; border-bottom: 3px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 15px; page-break-inside: avoid; }
+        .doc-logo { max-width: 90px; max-height: 90px; margin-right: 20px; object-fit: contain; }
+        .doc-title { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; color: var(--primary-color); text-transform: uppercase; }
+        .doc-subtitle { font-size: 15px; font-weight: 600; color: #475569; margin: 0 0 6px 0; }
+        .doc-intro { font-size: 12px; color: #64748b; white-space: pre-wrap; line-height: 1.4; }
+
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .matrix-table th, .matrix-table td { border: 1px solid #94a3b8; padding: 4px 2px; text-align: center; vertical-align: middle; white-space: nowrap; }
+        .matrix-table thead th { background-color: var(--primary-color); color: white; font-weight: 600; padding: 6px 2px; white-space: normal; }
+        
+        .col-text { text-align: left !important; font-weight: 600; background-color: #f8fafc; white-space: normal !important; min-width: 150px; }
+        .col-total { font-weight: 700; background-color: #f1f5f9; border-left: 2px solid #64748b !important; }
+
+        .cell-red { background-color: #ff1744 !important; color: #ffffff !important; font-weight: 700; text-shadow: 0 0 2px rgba(0,0,0,0.3); }
+        .cell-yellow { background-color: #ffea00 !important; color: #000000 !important; font-weight: 700; }
+        .cell-green { background-color: #00e676 !important; color: #000000 !important; font-weight: 700; text-shadow: 0 0 1px rgba(255,255,255,0.5); }
+        .cell-blue { background-color: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; }
+        .cell-empty { background-color: #f8fafc; color: #cbd5e1; }
+
+        .row-global td { border-top: 2px solid var(--primary-color); border-bottom: 2px solid var(--primary-color); font-size: 13px; font-weight: 700; }
+        .row-global .col-text { background-color: #e2e8f0; color: var(--primary-color); text-transform: uppercase; }
+
+        .filename-input-group { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        .filename-input-group input { flex: 1; }
+
+        .step-label { font-size: 12px; font-weight: 700; color: white; background: var(--accent-color); padding: 2px 6px; border-radius: 4px; margin-right: 5px; }
+
+        #loadingOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 1000; justify-content: center; align-items: center;
+            font-size: 18px; font-weight: bold; color: var(--primary-color); flex-direction: column; text-align: center;
+        }
+
+        .chart-container { width: 100%; max-width: 1000px; margin: 20px auto; background: white; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; display: none; }
+        .chart-controls { display: flex; gap: 15px; margin-bottom: 20px; }
+        .chart-controls select { flex: 1; }
+
+        @media print {
+            @page { size: landscape; margin: 10mm; }
+            body { background: white; padding: 0; }
+            .no-print { display: none !important; }
+            .container { box-shadow: none; padding: 0; margin: 0; width: 100%; }
+            .matrix-table th, .matrix-table td { border: 1px solid #000; font-size: 10pt; }
+            .matrix-table thead th { background-color: #e2e8f0 !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+            .cell-red, .cell-yellow, .cell-green, .cell-blue, .row-global .col-text { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .chart-container { display: block !important; border: none; padding: 0; page-break-before: always;}
+        }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div id="loadingText" style="margin-bottom: 15px;">Iniciando Painel de Resultados...</div>
+    <div style="font-size: 14px; font-weight: normal;" id="loadingDetails"></div>
+</div>
+
+<div class="container">
+    <div class="no-print">
+        <h1>Painel de Resultados AVAP</h1>
+        
+        <div class="config-section" id="uploadPanel">
+            <div class="grid-2">
+                <div>
+                    <label><strong><span class="step-label">PASSO 1</span> Arquivo de Matrículas:</strong></label>
+                    <input type="file" id="matriculasFileInput" accept=".xlsx, .xls, .csv" />
+                    <div id="statusMatriculas" style="font-size: 12px; color: #10b981; font-weight: 600; margin-top: 5px;"></div>
+                </div>
+                <div>
+                    <label><strong><span class="step-label">PASSO 2</span> Planilhas das Escolas (.xlsx):</strong></label>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" multiple />
+                </div>
+                <div>
+                    <label><strong>Logotipo (Opcional):</strong></label>
+                    <input type="file" id="logoInput" accept="image/*" />
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section" id="metaPanel">
+            <div class="grid-2">
+                <div class="full-width">
+                    <label><strong>Título do Documento:</strong></label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="docTitle" value="CONSOLIDADO GERAL - AVALIAÇÃO DE VERIFICAÇÃO DE APRENDIZAGEM" style="flex: 2;"/>
+                        <input type="text" id="docSubtitle" placeholder="Subtítulo (Ex: Diretoria de Ensino)" style="flex: 1;" value="Resultados da Rede"/>
+                    </div>
+                </div>
+                <div class="full-width">
+                    <label><strong>Metodologia:</strong></label>
+                    <textarea id="docIntro">Consolidação automática dos resultados das escolas, com taxa de participação cruzada pela base de matrículas ativa.</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="configArea" class="config-section no-print" style="display: none;">
+        <h3>Configuração de Exibição</h3>
+        <div class="grid-2">
+            <div>
+                <table class="config-table" id="subjectsTable">
+                    <thead><tr><th style="width: 50px; text-align: center;">Incluir</th><th>Nome Original</th><th>Nome Exportado</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div>
+                <table class="config-table">
+                    <tr><th colspan="2">Ordenação do Relatório</th></tr>
+                    <tr>
+                        <td>Ordenar por:</td>
+                        <td>
+                            <select id="sortBy" onchange="autoUpdate()">
+                                <option value="nome">Nome da Escola</option>
+                                <option value="geral">Média Geral</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Ordem:</td>
+                        <td>
+                            <select id="sortOrder" onchange="autoUpdate()">
+                                <option value="asc">Crescente (A-Z / Menor para Maior)</option>
+                                <option value="desc">Decrescente (Z-A / Maior para Menor)</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+                <table class="config-table" style="margin-top: 15px;">
+                    <tr><th colspan="2">Semaforização (%)</th></tr>
+                    <tr><td>Abaixo de (Vermelho)</td><td><input type="number" id="limitRed" value="50" onchange="autoUpdate(); renderChart();"></td></tr>
+                    <tr><td>Acima de (Verde)</td><td><input type="number" id="limitGreen" value="70" onchange="autoUpdate(); renderChart();"></td></tr>
+                </table>
+                <div style="text-align: right; margin-top: 15px;">
+                    <button class="btn btn-success" onclick="generateUnifiedReport()">Gerar Tabela</button>
+                    <button class="btn btn-chart" onclick="showChartArea()">Ver Gráficos por Turma</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="actionsArea" class="no-print" style="display:none; text-align: right; margin-bottom: 15px;">
+        <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+
+    <div id="reportsArea"></div>
+
+    <div id="chartArea" class="chart-container">
+        <h2 style="text-align: center; color: var(--primary-color);">Proficiência por Turma</h2>
+        <div class="chart-controls no-print">
+            <select id="schoolSelectChart" onchange="renderChart()"><option value="">Selecione uma Escola...</option></select>
+            <select id="subjectSelectChart" onchange="renderChart()"><option value="geral">Média Geral</option></select>
+        </div>
+        <div style="position: relative; height: 400px; width: 100%;"><canvas id="turmasChart"></canvas></div>
+    </div>
+</div>
+
+<script>
+    // =========================================================
+    // CONFIGURAÇÕES DO GITHUB PAGES
+    // =========================================================
+    const CONFIG = {
+        // Se MODO_VISUALIZADOR for true, o sistema vai ignorar o upload e baixar os arquivos da pasta do Github automaticamente
+        MODO_VISUALIZADOR: true, 
+        
+        // Caminho para o arquivo CSV de matrículas dentro do seu repositório Github (Ex: 'dados/AVARE.csv')
+        ARQUIVO_MATRICULAS: "dados/AVARE.csv", 
+        
+        // Liste os arquivos de Excel de cada escola que você subiu na pasta (Ex: 'dados/ESCOLA1.xlsx')
+        ARQUIVOS_ESCOLAS: [
+            "dados/ABILIO.xlsx",
+            "dados/ZUMBI_DOS_PALMARES.xlsx",
+            "dados/AVELINO.xlsx"
+            // adicione os nomes dos arquivos aqui
+        ]
+    };
+    // =========================================================
+
+    let globalSubjects = {}; 
+    let allSchools = []; 
+    let matriculasPorEscola = {};
+    let usaTaxaParticipacao = false;
+    let currentChart = null; 
+    let logoBase64 = "";
+
+    // INICIALIZAÇÃO DA PÁGINA
+    window.onload = async () => {
+        if (CONFIG.MODO_VISUALIZADOR) {
+            document.getElementById('uploadPanel').style.display = 'none';
+            await iniciarModoVisualizador();
+        } else {
+            // Modo de upload manual permanece normal
+            document.getElementById('uploadPanel').style.display = 'block';
+        }
+    };
+
+    // --- FUNÇÕES DO MODO GITHUB (VISUALIZADOR) ---
+    async function iniciarModoVisualizador() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        const detalhes = document.getElementById('loadingDetails');
+        
+        try {
+            // 1. Tenta baixar a base de matrículas
+            if (CONFIG.ARQUIVO_MATRICULAS) {
+                detalhes.innerText = "Baixando base de matrículas...";
+                try {
+                    const resp = await fetch(CONFIG.ARQUIVO_MATRICULAS);
+                    if (resp.ok) {
+                        const buffer = await resp.arrayBuffer();
+                        processMatriculasData({ name: CONFIG.ARQUIVO_MATRICULAS, data: new Uint8Array(buffer) });
+                    } else {
+                        console.warn("Arquivo de matrículas não encontrado no Github.");
+                    }
+                } catch(e) { console.error("Erro ao buscar matrículas:", e); }
+            }
+
+            // 2. Tenta baixar as escolas
+            detalhes.innerText = "Baixando dados das escolas...";
+            let filesData = [];
+            for (let i = 0; i < CONFIG.ARQUIVOS_ESCOLAS.length; i++) {
+                const url = CONFIG.ARQUIVOS_ESCOLAS[i];
+                detalhes.innerText = `Baixando escola ${i+1} de ${CONFIG.ARQUIVOS_ESCOLAS.length}...`;
+                try {
+                    const resp = await fetch(url);
+                    if (resp.ok) {
+                        const buffer = await resp.arrayBuffer();
+                        const fileName = url.split('/').pop();
+                        filesData.push({ name: fileName, data: new Uint8Array(buffer) });
+                    }
+                } catch(e) { console.error("Erro ao buscar", url, e); }
+            }
+
+            if (filesData.length > 0) {
+                detalhes.innerText = "Processando cálculos...";
+                processEscolasData(filesData);
+                generateUnifiedReport(); // Já exibe a tabela automaticamente ao carregar
+            } else {
+                alert("Nenhum dado de escola foi encontrado. Verifique a configuração dos arquivos.");
+            }
+
+        } catch(e) {
+            alert("Ocorreu um erro ao carregar os dados do painel automático.");
+            console.error(e);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    // --- PROCESSAMENTO CORE (Usado tanto pelo Upload quanto pelo Fetch) ---
+    function processMatriculasData(fileObj) {
+        let workbook;
+        if(fileObj.name.toLowerCase().endsWith('.csv')) {
+            const textDecoder = new TextDecoder('utf-8');
+            const csvStr = textDecoder.decode(fileObj.data);
+            workbook = XLSX.read(csvStr, {type: 'string'});
+        } else {
+            workbook = XLSX.read(fileObj.data, {type: 'array'});
+        }
+
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+        
+        matriculasPorEscola = {};
+        let escolasMapeadas = 0;
+
+        jsonData.forEach(row => {
+            const keys = Object.keys(row);
+            let escolaKey = keys.find(k => k.toLowerCase().includes('escola') || k.toLowerCase().includes('unidade'));
+            let matriculaKey = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('matrícula') || k.toLowerCase().includes('total'));
+            
+            if (!escolaKey) escolaKey = keys[0];
+            if (!matriculaKey) matriculaKey = keys[keys.length - 1]; 
+            
+            if (row[escolaKey] && row[matriculaKey]) {
+                let eName = String(row[escolaKey]).trim().toUpperCase().replace(/\s*-\s*\d+$/, '').trim(); 
+                const eMat = parseInt(row[matriculaKey]) || 0;
+                
+                if(eName !== "" && eMat > 0) {
+                    matriculasPorEscola[eName] = eMat;
+                    escolasMapeadas++;
+                }
+            }
+        });
+        usaTaxaParticipacao = escolasMapeadas > 0;
+        if (!CONFIG.MODO_VISUALIZADOR) {
+            document.getElementById('statusMatriculas').innerText = usaTaxaParticipacao ? `✓ Sucesso: ${escolasMapeadas} escolas mapeadas.` : "⚠ Nenhuma escola válida.";
+        }
+    }
+
+    function processEscolasData(filesData) {
+        globalSubjects = {};
+        allSchools = [];
+
+        filesData.forEach(fileObj => {
+            const workbook = XLSX.read(fileObj.data, {type: 'array'});
+            const extractedName = extractSchoolNameFromFile(fileObj.name);
+            
+            let matriculadosDaEscola = 0;
+            if (usaTaxaParticipacao) {
+                let searchKey = extractedName.toUpperCase();
+                for (let eName in matriculasPorEscola) {
+                    if (eName.includes(searchKey) || searchKey.includes(eName)) {
+                        matriculadosDaEscola = matriculasPorEscola[eName];
+                        break;
+                    }
+                }
+            }
+
+            let schoolData = {
+                nome: extractedName, alunos: 0, matriculados: matriculadosDaEscola, 
+                results: {}, turmas: {}, totalAcertos: 0, totalPossiveis: 0
+            };
+
+            let turmasJaContadas = new Set();
+
+            workbook.SheetNames.forEach(sheetName => {
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, {defval: ""});
+                if (jsonData.length === 0) return;
+
+                const headers = Object.keys(jsonData[0]);
+                const classColName = headers[0]; 
+
+                let sheetSubjectMap = {}; 
+                headers.forEach(h => {
+                    if (h === classColName || h.includes("Total de Alunos") || h.includes("Total de Acertos") || h.includes("Escola")) return;
+                    const matchName = h.match(/Acertos em (.*?)\s*\(/);
+                    let baseName = matchName ? matchName[1].trim() : h.trim();
+                    let qCount = 1;
+                    const matchQ = h.match(/\((Questões.*?)\)/);
+                    if (matchQ) qCount = (matchQ[1].match(/,/g) || []).length + 1;
+
+                    sheetSubjectMap[h] = { baseName, qCount };
+                    if (!globalSubjects[baseName]) globalSubjects[baseName] = { exportName: baseName };
+                });
+
+                jsonData.forEach(row => {
+                    if (!row[classColName]) return;
+                    const turmaOriginal = String(row[classColName]).trim().toUpperCase();
+                    const alunosPresentes = parseInt(row["Total de Alunos"]) || 0;
+                    if (alunosPresentes === 0) return;
+
+                    if (!turmasJaContadas.has(turmaOriginal)) {
+                        schoolData.alunos += alunosPresentes;
+                        turmasJaContadas.add(turmaOriginal);
+                    }
+
+                    if (!schoolData.turmas[turmaOriginal]) {
+                        schoolData.turmas[turmaOriginal] = { nome: turmaOriginal, alunos: alunosPresentes, results: {}, totalAcertos: 0, totalPossiveis: 0 };
+                    }
+
+                    for (let rawHeader in sheetSubjectMap) {
+                        const info = sheetSubjectMap[rawHeader];
+                        const val = row[rawHeader];
+                        if (val !== undefined && val.toString().trim() !== "") {
+                            const acertos = parseInt(val) || 0;
+                            const possiveis = alunosPresentes * info.qCount; 
+                            
+                            if (!schoolData.results[info.baseName]) schoolData.results[info.baseName] = { acertos: 0, possiveis: 0 };
+                            schoolData.results[info.baseName].acertos += acertos;
+                            schoolData.results[info.baseName].possiveis += possiveis;
+                            schoolData.totalAcertos += acertos;
+                            schoolData.totalPossiveis += possiveis;
+
+                            if (!schoolData.turmas[turmaOriginal].results[info.baseName]) schoolData.turmas[turmaOriginal].results[info.baseName] = { acertos: 0, possiveis: 0 };
+                            schoolData.turmas[turmaOriginal].results[info.baseName].acertos += acertos;
+                            schoolData.turmas[turmaOriginal].results[info.baseName].possiveis += possiveis;
+                            schoolData.turmas[turmaOriginal].totalAcertos += acertos;
+                            schoolData.turmas[turmaOriginal].totalPossiveis += possiveis;
+                        }
+                    }
+                });
+            });
+            if(schoolData.alunos > 0) allSchools.push(schoolData);
+        });
+
+        allSchools.sort((a, b) => a.nome.localeCompare(b.nome));
+        renderSubjectsConfig();
+        updateChartSelects();
+        document.getElementById('configArea').style.display = 'block';
+    }
+
+
+    // --- EVENTOS DE UPLOAD MANUAL (Se MODO_VISUALIZADOR for false) ---
+    document.getElementById('matriculasFileInput').addEventListener('change', async function(e) {
+        if (!e.target.files[0]) return;
+        const fileObj = await readFileAsArrayBuffer(e.target.files[0]);
+        processMatriculasData(fileObj);
+    });
+
+    document.getElementById('excelFileInput').addEventListener('change', async function(e) {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('loadingDetails').innerText = "Lendo arquivos selecionados...";
+        
+        const filePromises = Array.from(files).map(file => readFileAsArrayBuffer(file));
+        const filesData = await Promise.all(filePromises);
+        
+        processEscolasData(filesData);
+        
+        document.getElementById('reportsArea').innerHTML = '';
+        document.getElementById('chartArea').style.display = 'none';
+        document.getElementById('loadingOverlay').style.display = 'none';
+        generateUnifiedReport();
+    });
+
+    function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve({ name: file.name, data: new Uint8Array(e.target.result) });
+            reader.onerror = e => reject(e);
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    function extractSchoolNameFromFile(filename) {
+        if (!filename) return "";
+        let nameWithoutExt = filename.replace(/\.[^/.]+$/, "").replace(/[^\w\s\u00C0-\u00FF-]/g, "").replace(/\b\w/g, char => char.toUpperCase());
+        return nameWithoutExt.trim().split(/\s+/).slice(0, 2).join(" ");
+    }
+
+    document.getElementById('logoInput').addEventListener('change', function(e) {
+        if (!e.target.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = function(event) { logoBase64 = event.target.result; autoUpdate(); };
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    // --- RENDERIZAÇÃO DA INTERFACE (Tabelas e Gráficos) ---
+    function renderSubjectsConfig() {
+        const tbody = document.querySelector('#subjectsTable tbody');
+        tbody.innerHTML = '';
+        const keys = Object.keys(globalSubjects).sort(); 
+        const sortBySelect = document.getElementById('sortBy');
+        const currentSortBy = sortBySelect.value;
+        let optionsHtml = `<option value="nome">Nome da Escola</option><option value="geral">Média Geral</option>`;
+        
+        keys.forEach((key, index) => {
+            tbody.innerHTML += `<tr>
+                <td style="text-align: center;"><input type="checkbox" data-key="${key}" checked onchange="autoUpdate(); updateChartSelects();"></td>
+                <td style="font-size:12px; font-weight:600;">${key}</td>
+                <td><input type="text" id="name_${index}" value="${globalSubjects[key].exportName}" style="padding:4px; font-size:12px;" data-key="${key}" onkeyup="autoUpdate(); updateChartSelects();"></td>
+            </tr>`;
+            optionsHtml += `<option value="${key}">Disciplina: ${key}</option>`;
+        });
+        sortBySelect.innerHTML = optionsHtml;
+        if ([...sortBySelect.options].some(o => o.value === currentSortBy)) sortBySelect.value = currentSortBy;
+    }
+
+    function getSemaforoClass(pct, limitRed, limitGreen) {
+        if (pct < 0) return "cell-empty"; 
+        if (pct < limitRed) return "cell-red";
+        if (pct >= limitGreen) return "cell-green";
+        return "cell-yellow";
+    }
+
+    function getChartColor(pct, limitRed, limitGreen) {
+        if (pct < 0) return "#cbd5e1"; 
+        if (pct < limitRed) return "#ff1744"; 
+        if (pct >= limitGreen) return "#00e676"; 
+        return "#ffea00"; 
+    }
+
+    function autoUpdate() { if (document.getElementById('actionsArea').style.display === 'block') generateUnifiedReport(); }
+
+    function updateChartSelects() {
+        const schoolSelect = document.getElementById('schoolSelectChart');
+        const subjectSelect = document.getElementById('subjectSelectChart');
+        schoolSelect.innerHTML = '<option value="">Selecione uma Escola...</option>';
+        allSchools.forEach((school, index) => schoolSelect.innerHTML += `<option value="${index}">${school.nome}</option>`);
+
+        subjectSelect.innerHTML = '<option value="geral">Média Geral (Todas as Disciplinas)</option>';
+        document.querySelectorAll('input[id^="name_"]').forEach(input => {
+            const key = input.getAttribute('data-key');
+            if (document.querySelector(`input[type="checkbox"][data-key="${key}"]`)?.checked) {
+                subjectSelect.innerHTML += `<option value="${key}">${input.value}</option>`;
+            }
+        });
+    }
+
+    function showChartArea() {
+        document.getElementById('chartArea').style.display = 'block';
+        if(allSchools.length > 0 && document.getElementById('schoolSelectChart').value === "") document.getElementById('schoolSelectChart').value = 0;
+        renderChart();
+        document.getElementById('chartArea').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderChart() {
+        if (document.getElementById('chartArea').style.display === 'none') return;
+        const schoolIndex = document.getElementById('schoolSelectChart').value;
+        const subjectKey = document.getElementById('subjectSelectChart').value;
+        const limitRed = parseFloat(document.getElementById('limitRed').value);
+        const limitGreen = parseFloat(document.getElementById('limitGreen').value);
+
+        if (schoolIndex === "") return;
+        const school = allSchools[schoolIndex];
+        const turmasKeys = Object.keys(school.turmas).sort();
+
+        let labels = [], dataPcts = [], backgroundColors = [];
+
+        turmasKeys.forEach(tKey => {
+            const turma = school.turmas[tKey];
+            let pct = 0;
+            let shortName = tKey.replace(/(INTEGRAL|MANHA|TARDE|ANUAL|T1|T2|7H|9H|\-|\d{8,})/g, '').trim();
+            if(shortName.length === 0) shortName = tKey.substring(0, 10);
+            
+            labels.push(shortName);
+            if (subjectKey === "geral") {
+                pct = turma.totalPossiveis > 0 ? (turma.totalAcertos / turma.totalPossiveis) * 100 : 0;
+            } else {
+                pct = (turma.results[subjectKey] && turma.results[subjectKey].possiveis > 0) ? (turma.results[subjectKey].acertos / turma.results[subjectKey].possiveis) * 100 : 0;
+            }
+            dataPcts.push(pct.toFixed(1));
+            backgroundColors.push(getChartColor(pct, limitRed, limitGreen));
+        });
+
+        const ctx = document.getElementById('turmasChart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+
+        currentChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { type: 'line', label: 'Meta Desejada', data: Array(labels.length).fill(limitGreen), borderColor: '#0f172a', borderWidth: 2, borderDash: [5, 5], fill: false, pointRadius: 0 },
+                    { type: 'bar', label: 'Proficiência (%)', data: dataPcts, backgroundColor: backgroundColors, borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Acertos (%)' } }, x: { ticks: { maxRotation: 45, minRotation: 45 } } },
+                plugins: { legend: { labels: { filter: function(item) { return item.text.includes('Meta'); } } }, tooltip: { callbacks: { label: function(context) { return context.raw + '%'; } } } }
+            }
+        });
+    }
+
+    function generateUnifiedReport() {
+        const reportsArea = document.getElementById('reportsArea');
+        reportsArea.innerHTML = '';
+        const docTitle = document.getElementById('docTitle').value;
+        const docSubtitle = document.getElementById('docSubtitle').value;
+        const docIntro = document.getElementById('docIntro').value;
+        const limitRed = parseFloat(document.getElementById('limitRed').value);
+        const limitGreen = parseFloat(document.getElementById('limitGreen').value);
+
+        let orderedKeys = [];
+        document.querySelectorAll('input[id^="name_"]').forEach(input => {
+            const key = input.getAttribute('data-key');
+            globalSubjects[key].exportName = input.value;
+            if (document.querySelector(`input[type="checkbox"][data-key="${key}"]`)?.checked) orderedKeys.push(key);
+        });
+
+        if (orderedKeys.length === 0) {
+            document.getElementById('actionsArea').style.display = 'none';
+            return;
+        }
+
+        let schoolsToSort = allSchools.map(school => {
+            let filteredAcertos = 0, filteredPossiveis = 0, subjectPcts = {}; 
+            orderedKeys.forEach(k => {
+                const res = school.results[k];
+                if (res) { filteredAcertos += res.acertos; filteredPossiveis += res.possiveis; subjectPcts[k] = res.possiveis > 0 ? (res.acertos / res.possiveis) * 100 : -1; } 
+                else { subjectPcts[k] = -1; }
+            });
+            return { ...school, rowPct: filteredPossiveis > 0 ? (filteredAcertos / filteredPossiveis) * 100 : -1, subjectPcts: subjectPcts, filteredAcertos: filteredAcertos, filteredPossiveis: filteredPossiveis };
+        });
+
+        const sortBy = document.getElementById('sortBy').value;
+        const sortOrder = document.getElementById('sortOrder').value;
+
+        schoolsToSort.sort((a, b) => {
+            let valA, valB;
+            if (sortBy === 'nome') return sortOrder === 'asc' ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome);
+            else if (sortBy === 'geral') { valA = a.rowPct; valB = b.rowPct; } 
+            else { valA = a.subjectPcts[sortBy] !== undefined ? a.subjectPcts[sortBy] : -1; valB = b.subjectPcts[sortBy] !== undefined ? b.subjectPcts[sortBy] : -1; }
+            if (valA === valB) return a.nome.localeCompare(b.nome);
+            return sortOrder === 'asc' ? valA - valB : valB - valA;
+        });
+
+        let html = `<div class="doc-header">`;
+        if (logoBase64) html += `<img src="${logoBase64}" class="doc-logo" alt="Logo">`;
+        html += `<div><h1 class="doc-title">${docTitle}</h1>${docSubtitle ? `<h2 class="doc-subtitle">${docSubtitle}</h2>` : ''}${docIntro ? `<div class="doc-intro">${docIntro}</div>` : ''}</div></div>`;
+
+        html += `<table class="matrix-table"><thead><tr><th style="min-width: 200px;">Unidade Escolar</th><th title="Alunos que realizaram a prova">Alunos<br>(Presentes)</th>`;
+        if(usaTaxaParticipacao) html += `<th title="Total de alunos matriculados">Total<br>Matric.</th><th title="Taxa de Participação">Partic.<br>(%)</th>`;
+        orderedKeys.forEach(k => html += `<th>${globalSubjects[k].exportName}</th>`);
+        html += `<th>Média<br>Escola</th></tr></thead><tbody>`;
+
+        let globalAlunos = 0, globalMatriculados = 0, globalAcertos = 0, globalPossiveis = 0;
+        let resumoComp = {};
+        orderedKeys.forEach(k => resumoComp[k] = { acertos: 0, possiveis: 0 });
+
+        let rowsHtml = "";
+        schoolsToSort.forEach(school => {
+            globalAlunos += school.alunos;
+            if(usaTaxaParticipacao && school.matriculados > 0) globalMatriculados += school.matriculados;
+            else if (usaTaxaParticipacao) globalMatriculados += school.alunos; 
+            
+            rowsHtml += `<tr><td class="col-text">${school.nome}</td><td>${school.alunos}</td>`;
+            if(usaTaxaParticipacao) {
+                let taxaParticipacao = school.matriculados > 0 ? Math.min((school.alunos / school.matriculados) * 100, 100) : 100;
+                rowsHtml += `<td>${school.matriculados > 0 ? school.matriculados : "-"}</td><td class="cell-blue">${taxaParticipacao.toFixed(1).replace('.', ',')}%</td>`;
+            }
+
+            orderedKeys.forEach(k => {
+                const res = school.results[k];
+                if (!res) { rowsHtml += `<td class="cell-empty">-</td>`; } 
+                else {
+                    resumoComp[k].acertos += res.acertos; resumoComp[k].possiveis += res.possiveis;
+                    rowsHtml += `<td class="${getSemaforoClass(school.subjectPcts[k], limitRed, limitGreen)}">${school.subjectPcts[k].toFixed(1).replace('.', ',')}%</td>`;
+                }
+            });
+
+            globalAcertos += school.filteredAcertos; globalPossiveis += school.filteredPossiveis;
+            rowsHtml += `<td class="col-total ${getSemaforoClass(school.rowPct, limitRed, limitGreen)}">${school.rowPct === -1 ? "-" : school.rowPct.toFixed(1).replace('.', ',') + "%"}</td></tr>`;
+        });
+
+        html += `<tr class="row-global"><td class="col-text">CONSOLIDADO GERAL</td><td>${globalAlunos}</td>`;
+        if (usaTaxaParticipacao) {
+            let taxaGeral = globalMatriculados > 0 ? Math.min((globalAlunos / globalMatriculados) * 100, 100) : 0;
+            html += `<td>${globalMatriculados}</td><td class="cell-blue">${taxaGeral.toFixed(1).replace('.', ',')}%</td>`;
+        }
+        
+        orderedKeys.forEach(k => {
+            if (resumoComp[k].possiveis === 0) html += `<td class="cell-empty">-</td>`;
+            else {
+                let pct = (resumoComp[k].acertos / resumoComp[k].possiveis) * 100;
+                html += `<td class="${getSemaforoClass(pct, limitRed, limitGreen)}">${pct.toFixed(1).replace('.', ',')}%</td>`;
+            }
+        });
+
+        let geralPct = globalPossiveis > 0 ? (globalAcertos / globalPossiveis) * 100 : 0;
+        html += `<td class="col-total ${getSemaforoClass(geralPct, limitRed, limitGreen)}">${geralPct.toFixed(1).replace('.', ',')}%</td></tr>`;
+
+        html += rowsHtml + `</tbody></table>`;
+        reportsArea.innerHTML = html;
+        document.getElementById('actionsArea').style.display = 'block';
+    }
+    
+    document.getElementById('docTitle').addEventListener('keyup', autoUpdate);
+    document.getElementById('docSubtitle').addEventListener('keyup', autoUpdate);
+    document.getElementById('docIntro').addEventListener('keyup', autoUpdate);
+</script>
+</body>
+</html>
