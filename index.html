@@ -52,14 +52,12 @@
         .col-total { font-weight: 700; border-left: 2px solid #94a3b8 !important; }
         .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; cursor: default; }
 
-        /* Cores das Células */
         .cell-red { background-color: var(--red-vivid) !important; color: var(--red-text) !important; font-weight: 700; }
         .cell-yellow { background-color: var(--yellow-vivid) !important; color: var(--yellow-text) !important; font-weight: 700; }
         .cell-green { background-color: var(--green-vivid) !important; color: var(--green-text) !important; font-weight: 700; }
         .cell-blue { background: var(--blue-bg) !important; color: var(--blue-text) !important; font-weight: 700; }
         .cell-empty { background: #f8fafc; color: #cbd5e1; }
 
-        /* Célula Interativa (Clique para ver Rank) */
         .interactive-cell { cursor: pointer; transition: transform 0.1s; }
         .interactive-cell:hover { filter: brightness(0.9); transform: scale(0.98); }
         .rank-text { font-size: 10.5px; font-weight: 600; line-height: 1.2; }
@@ -103,7 +101,7 @@
             <img src="imagens/logo-ure-avare-site.png" alt="Logo URE Avaré" class="logo-img no-print" onerror="this.style.display='none'">
             <div class="header-text">
                 <h1>Painel Analítico AVAP</h1>
-                <p>Análise de Desempenho - <b>Dica: Clique sobre a % para ver a colocação da turma!</b></p>
+                <p>Análise de Desempenho - <b>Dica: Clique sobre a % para ver a colocação da turma no mesmo ano/série!</b></p>
             </div>
         </div>
         <button class="tab-btn btn-print no-print" onclick="window.print()">🖨️ Imprimir (Paisagem)</button>
@@ -127,9 +125,6 @@
 </div>
 
 <script>
-    // =====================================================================
-    // CONFIGURAÇÃO DOS ARQUIVOS (PASTA 'dados/' NO GITHUB)
-    // =====================================================================
     const CONFIG = {
         ARQUIVO_MATRICULAS_REDE: "dados/AVARE.xlsx",    
         ARQUIVO_MATRICULAS_TURMA: "dados/ESCOLAS.xlsx", 
@@ -166,7 +161,6 @@
     let matriculasTurmasGlobais = {}; 
     let disciplinasGlobais = new Set();
     
-    // VARIÁVEIS DO NOVO MOTOR DE RANKING GLOBAL
     let rankingGlobaisEscolas = [];
     let rankingGlobaisTurmas = [];
     
@@ -189,7 +183,6 @@
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_TURMA, matriculasTurmasGlobais, 'turma');
             await carregarTodasPlanilhasExcel();
             
-            // Pré-processa os rankings para os cliques!
             preCalcularTodosRankings();
 
             const select = document.getElementById('escolaSelect');
@@ -263,13 +256,19 @@
         }
     }
 
-    // ==============================================================================
-    // MOTOR DE PRÉ-CÁLCULO DE RANKINGS (Para gerar o texto URE 4/240; UE 1/6)
-    // ==============================================================================
+    // EXTRAI O ANO/SÉRIE DO NOME DA TURMA (Ex: "9º ANO", "2ª SÉRIE") PARA AGRUPAMENTO
+    function extrairAnoSerie(nome) {
+        const match = nome.match(/([1-9][º°ªa-z]*\s*(?:ANO|S[EÉ]RIE))/i);
+        if (match) {
+            // Remove espaços e acentos para criar uma chave única de cruzamento robusta (ex: 9ANO, 2SERIE)
+            return match[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+        return "OUTROS";
+    }
+
     function preCalcularTodosRankings() {
         const discArray = Array.from(disciplinasGlobais).sort();
         
-        // 1. Processa TODAS AS TURMAS de TODAS AS ESCOLAS de uma vez
         Object.keys(dadosEscolasCache).forEach(escola => {
             let turmasMap = {};
             dadosEscolasCache[escola].forEach(row => {
@@ -277,7 +276,15 @@
                 const pres = parseInt(row["Total de Alunos"]) || 0;
                 
                 if (!turmasMap[tNome]) {
-                    turmasMap[tNome] = { escola: escola, turma: tNome, pres: pres, acertos: 0, possiveis: 0, disc: {} };
+                    turmasMap[tNome] = { 
+                        escola: escola, 
+                        turma: tNome, 
+                        anoSerie: extrairAnoSerie(tNome), // Chave para filtrar
+                        pres: pres, 
+                        acertos: 0, 
+                        possiveis: 0, 
+                        disc: {} 
+                    };
                     discArray.forEach(d => turmasMap[tNome].disc[d] = { acertos: 0, possiveis: 0, pct: -1 });
                 }
                 
@@ -296,7 +303,6 @@
                 });
             });
 
-            // Fecha o calculo e insere na lista mestre de turmas
             Object.keys(turmasMap).forEach(tNome => {
                 let t = turmasMap[tNome];
                 let mat = matriculasTurmasGlobais[tNome] || t.pres;
@@ -311,7 +317,6 @@
             });
         });
 
-        // 2. Processa TODAS AS ESCOLAS (Agrupado)
         Object.keys(dadosEscolasCache).forEach(escola => {
             let e = { nome: escola, pres: 0, acertos: 0, possiveis: 0, disc: {} };
             discArray.forEach(d => e.disc[d] = { acertos: 0, possiveis: 0, pct: -1 });
@@ -330,13 +335,15 @@
         });
     }
 
-    // Função Auxiliar para descobrir Rank a qualquer momento
-    function getRank(listaMestre, itemNome, valorProcurado, tipoBusca, field) {
+    // RANK CALCULATION COM FILTRO DE ANO/SÉRIE
+    function getRank(listaMestre, itemNome, valorProcurado, tipoBusca, field, anoSerieFiltro = null) {
         if(valorProcurado === -1) return "-";
         let validos = [];
         
-        // Filtra os válidos e pega a propriedade correta
         listaMestre.forEach(item => {
+            // Se for busca de turma, filtra para comparar apenas com a mesma série (e ignora as outras)
+            if (tipoBusca === 'turma' && anoSerieFiltro && item.anoSerie !== anoSerieFiltro) return;
+
             let v = -1;
             if (field === 'mediaGeral') v = item.mediaGeral;
             else if (field === 'pctPart') v = item.pctPart;
@@ -345,10 +352,8 @@
             if (v !== -1) validos.push({ nome: (tipoBusca === 'escola' ? item.nome : item.turma), val: v });
         });
 
-        // Ordena
         validos.sort((a,b) => b.val - a.val);
 
-        // Acha a colocação (lidando com empates)
         let rank = 1;
         for (let i = 0; i < validos.length; i++) {
             if (i > 0 && validos[i].val < validos[i-1].val) rank = i + 1;
@@ -357,7 +362,6 @@
         return "-";
     }
 
-    // --- INTERAÇÃO NA TABELA (Clique p/ Trocar Texto) ---
     window.toggleCellText = function(cell) {
         const isPct = cell.getAttribute('data-showing-pct') === 'true';
         if (isPct) {
@@ -368,7 +372,6 @@
             cell.setAttribute('data-showing-pct', 'true');
         }
     };
-
 
     function setModo(modo) {
         modoAtual = modo;
@@ -417,9 +420,7 @@
     }
 
     function processarDadosGeral() {
-        // Aproveita o pre-cálculo feito no motor mestre!
         currentData = [...rankingGlobaisEscolas];
-        
         let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
         let globDisc = {};
         const discArray = Array.from(disciplinasGlobais).sort();
@@ -431,7 +432,7 @@
             globMatriculas += mat; 
             globAcertos += e.acertos; globPossiveis += e.possiveis;
             discArray.forEach(d => { globDisc[d].acertos += e.disc[d].acertos; globDisc[d].possiveis += e.disc[d].possiveis; });
-            e.escDisc = e.disc; // Ajuste de nomenclatura p/ sort
+            e.escDisc = e.disc; 
         });
 
         totaisGlobais = { globAlunos, globMatriculas, globAcertos, globPossiveis, globDisc, discArray };
@@ -460,7 +461,7 @@
             globAcertos += t.acertos; globPossiveis += t.possiveis;
             discArray.forEach(d => { globDisc[d].acertos += t.disc[d].acertos; globDisc[d].possiveis += t.disc[d].possiveis; });
             
-            t.nome = t.turma; // Ajuste de nomenclatura
+            t.nome = t.turma; 
             t.escDisc = t.disc; 
         });
 
@@ -498,7 +499,7 @@
         
         let rankStr = modoAtual === 'GERAL' ? `URE ${rankUre}` : `URE ${rankUre}<br>UE ${rankUe}`;
         
-        return `<td class="${semaforoClass} interactive-cell" title="Clique para ver o Rank na Rede!" 
+        return `<td class="${semaforoClass} interactive-cell" title="Clique para ver o Rank!" 
                     data-showing-pct="true" 
                     data-pct="${pctStr}" 
                     data-rank="${rankStr}" 
@@ -516,26 +517,24 @@
 
         currentData.forEach((e, index) => {
             clas = index + 1;
-            
             if (index > 0 && currentSortCol !== 'nome') {
                 let cVal, pValObj;
                 let prevObj = currentData[index - 1];
-                
                 if (currentSortCol === 'pres') { cVal = e.pres; pValObj = prevObj.pres; }
                 else if (currentSortCol === 'mat') { cVal = (modoAtual==='GERAL'? (matriculasRede[e.nome]||e.pres) : (matriculasTurmasGlobais[e.nome]||e.pres)); pValObj = (modoAtual==='GERAL'? (matriculasRede[prevObj.nome]||prevObj.pres) : (matriculasTurmasGlobais[prevObj.nome]||prevObj.pres)); }
                 else if (currentSortCol === 'part') { cVal = e.pctPart; pValObj = prevObj.pctPart; }
                 else if (currentSortCol === 'media') { cVal = e.mediaGeral; pValObj = prevObj.mediaGeral; }
                 else { cVal = e.escDisc[currentSortCol].pct; pValObj = prevObj.escDisc[currentSortCol].pct; }
-
                 if (cVal === pValObj) clas = pClas; else pClas = clas; 
             } else { pClas = clas; }
 
-            // Lógica de Rank da Linha Específica
             let matrics = modoAtual === 'GERAL' ? (matriculasRede[e.nome]||e.pres) : (matriculasTurmasGlobais[e.nome]||e.pres);
             
-            // Calcula Rank de Participação
-            let rUrePart = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.pctPart, 'escola', 'pctPart') : getRank(rankingGlobaisTurmas, e.nome, e.pctPart, 'turma', 'pctPart');
-            let rUePart = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.pctPart, 'turma', 'pctPart'); // Dentro da própria escola
+            // Passa e.anoSerie para o filtro de URE e UE (garantindo que um 6º ano só compita com 6º ano)
+            let anoSerieFiltro = modoAtual === 'GERAL' ? null : e.anoSerie;
+
+            let rUrePart = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.pctPart, 'escola', 'pctPart') : getRank(rankingGlobaisTurmas, e.nome, e.pctPart, 'turma', 'pctPart', anoSerieFiltro);
+            let rUePart = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.pctPart, 'turma', 'pctPart', anoSerieFiltro);
             
             let partPctStr = e.pctPart.toFixed(1).replace('.',',') + "%";
             let partHtml = generateCellHTML(partPctStr, rUrePart, rUePart, "cell-blue");
@@ -551,16 +550,15 @@
                 const pct = e.escDisc[d].pct;
                 let pctStr = pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%";
                 
-                let rUre = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, pct, 'escola', d) : getRank(rankingGlobaisTurmas, e.nome, pct, 'turma', d);
-                let rUe = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, pct, 'turma', d);
+                let rUre = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, pct, 'escola', d) : getRank(rankingGlobaisTurmas, e.nome, pct, 'turma', d, anoSerieFiltro);
+                let rUe = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, pct, 'turma', d, anoSerieFiltro);
                 
                 htmlRows += generateCellHTML(pctStr, rUre, rUe, getSemaforoClass(pct));
             });
 
-            // Média Geral
             let mgStr = e.mediaGeral === -1 ? "-" : e.mediaGeral.toFixed(1).replace('.',',')+"%";
-            let rUreMg = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.mediaGeral, 'escola', 'mediaGeral') : getRank(rankingGlobaisTurmas, e.nome, e.mediaGeral, 'turma', 'mediaGeral');
-            let rUeMg = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.mediaGeral, 'turma', 'mediaGeral');
+            let rUreMg = modoAtual === 'GERAL' ? getRank(rankingGlobaisEscolas, e.nome, e.mediaGeral, 'escola', 'mediaGeral') : getRank(rankingGlobaisTurmas, e.nome, e.mediaGeral, 'turma', 'mediaGeral', anoSerieFiltro);
+            let rUeMg = modoAtual === 'GERAL' ? "" : getRank(currentData, e.nome, e.mediaGeral, 'turma', 'mediaGeral', anoSerieFiltro);
             
             htmlRows += generateCellHTML(mgStr, rUreMg, rUeMg, "col-total " + getSemaforoClass(e.mediaGeral));
             htmlRows += `</tr>`;
