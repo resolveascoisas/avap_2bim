@@ -3,19 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Resultados AVAP</title>
+    <title>Dashboard Analítico AVAP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         :root {
-            --primary: #0f172a;
-            --secondary: #334155;
-            --accent: #3b82f6;
-            --bg: #f8fafc;
-            --border: #e2e8f0;
-            
+            --primary: #0f172a; --secondary: #334155; --accent: #3b82f6; --bg: #f8fafc; --border: #e2e8f0;
             --red-bg: #fee2e2; --red-text: #b91c1c;
             --yellow-bg: #fef9c3; --yellow-text: #a16207;
             --green-bg: #dcfce7; --green-text: #15803d;
@@ -29,36 +24,37 @@
         .header h1 { margin: 0; font-size: 24px; color: var(--primary); }
         .header p { margin: 4px 0 0 0; font-size: 14px; color: var(--secondary); }
 
-        /* Abas de Navegação */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { padding: 10px 20px; cursor: pointer; border: 1px solid var(--border); background: #f1f5f9; border-radius: 6px; font-weight: 600; font-size: 14px; color: var(--secondary); transition: all 0.2s; }
         .tab-btn:hover { background: #e2e8f0; }
         .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-        /* Controles (Dropdown) */
         .controls { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .controls select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'Inter'; font-size: 14px; min-width: 250px; outline: none; }
+        .controls select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'Inter'; font-size: 14px; min-width: 250px; outline: none; cursor: pointer; }
 
-        /* Tabela */
-        .table-wrapper { overflow-x: auto; margin-bottom: 30px; }
+        .table-wrapper { overflow-x: auto; margin-bottom: 30px; border-radius: 8px; border: 1px solid var(--border); }
         .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .data-table th, .data-table td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; vertical-align: middle; white-space: nowrap; }
-        .data-table thead th { background: var(--primary); color: white; font-weight: 600; padding: 12px 6px; white-space: normal; }
+        .data-table th, .data-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 6px; text-align: center; vertical-align: middle; white-space: nowrap; }
+        
+        /* Cabeçalhos Clicáveis */
+        .data-table thead th { background: var(--primary); color: white; font-weight: 600; padding: 12px 6px; white-space: normal; cursor: pointer; user-select: none; transition: background 0.2s; }
+        .data-table thead th:hover { background: #1e293b; }
+        .sort-icon { display: inline-block; margin-left: 5px; font-size: 10px; color: #94a3b8; }
+        .th-active { background: var(--accent) !important; }
+        .th-active .sort-icon { color: white; }
+
         .col-text { text-align: left !important; font-weight: 600; background: #f8fafc; white-space: normal !important; min-width: 180px; }
         .col-total { font-weight: 700; border-left: 2px solid #94a3b8 !important; }
-        .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; }
+        .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; cursor: default; }
 
-        /* Semáforo Customizado */
         .cell-red { background: var(--red-bg) !important; color: var(--red-text) !important; font-weight: 700; }
         .cell-yellow { background: var(--yellow-bg) !important; color: var(--yellow-text) !important; font-weight: 700; }
         .cell-green { background: var(--green-bg) !important; color: var(--green-text) !important; font-weight: 700; }
         .cell-blue { background: var(--blue-bg) !important; color: var(--blue-text) !important; font-weight: 700; }
         .cell-empty { background: #f8fafc; color: #cbd5e1; }
 
-        /* Gráfico */
         .chart-container { position: relative; height: 400px; width: 100%; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
 
-        /* Loading */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.95); z-index: 1000; display: flex; flex-direction: column;
@@ -72,26 +68,26 @@
 
 <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div id="loadingText">Iniciando Dashboard...</div>
-    <div id="loadingSubtext" style="font-size: 13px; font-weight: 400; color: var(--secondary); margin-top: 5px;">Baixando dados da rede</div>
+    <div id="loadingText">Sincronizando Base de Dados...</div>
+    <div id="loadingSubtext" style="font-size: 13px; font-weight: 400; color: var(--secondary); margin-top: 5px;">Aguarde, processando as 24 escolas.</div>
 </div>
 
 <div class="dashboard-container">
     <div class="header">
         <div>
             <h1>Painel Analítico AVAP</h1>
-            <p>Consolidação de Múltiplas Escolas e Turmas</p>
+            <p>Clique no título de qualquer coluna para ordenar os resultados</p>
         </div>
     </div>
 
     <div class="tabs">
         <button id="btnTabGeral" class="tab-btn active" onclick="setModo('GERAL')">📊 Visão Geral da Rede</button>
-        <button id="btnTabEscola" class="tab-btn" onclick="setModo('ESCOLA')">🏫 Visão por Escola / Turma</button>
+        <button id="btnTabEscola" class="tab-btn" onclick="setModo('ESCOLA')">🏫 Granulação por Turma</button>
     </div>
 
     <div id="escolaControls" class="controls" style="display: none;">
-        <label style="font-weight: 600; font-size: 14px;">Selecione a Unidade Escolar:</label>
-        <select id="escolaSelect" onchange="renderizarEscola()"></select>
+        <label style="font-weight: 600; font-size: 14px;">Filtrar Unidade Escolar:</label>
+        <select id="escolaSelect" onchange="resetSortAndRender()"></select>
     </div>
 
     <div class="table-wrapper" id="tabelaArea"></div>
@@ -106,7 +102,8 @@
     // CONFIGURAÇÃO DOS ARQUIVOS (PASTA 'dados/' NO GITHUB)
     // =====================================================================
     const CONFIG = {
-        ARQUIVO_MATRICULAS_REDE: "dados/AVARE.csv",
+        ARQUIVO_MATRICULAS_REDE: "dados/AVARE.csv",    // Matrículas por Escola
+        ARQUIVO_MATRICULAS_TURMA: "dados/ESCOLAS.csv", // Matrículas por Turma (Todos juntos)
         ESCOLAS: [
             "ABILIO RAPOSO FERRAZ JUNIOR",
             "ASSENTAMENTO ZUMBI DOS PALMARES",
@@ -135,41 +132,42 @@
         ]
     };
 
-    // Variáveis Globais de Estado
-    let dadosEscolasCache = {}; // Armazena os JSONs extraídos dos Excel
-    let matriculasRede = {}; // { "NOME DA ESCOLA": total }
-    let matriculasTurmasCache = {}; // { "NOME DA ESCOLA": { "TURMA A": total, "TURMA B": total } }
+    let dadosEscolasCache = {}; 
+    let matriculasRede = {}; 
+    let matriculasTurmasGlobais = {}; 
     let disciplinasGlobais = new Set();
+    
     let modoAtual = 'GERAL';
     let chartInstance = null;
+    
+    // Estado de Ordenação
+    let currentSortCol = 'nome'; // Qual coluna está ordenando
+    let currentSortDir = 'asc';  // 'asc' ou 'desc'
+    let currentData = [];        // Guarda os dados processados para ordenação rápida
 
-    // --- INICIALIZAÇÃO ---
     window.onload = async () => {
-        await carregarMatriculasGerais();
+        await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_REDE, matriculasRede, 'escola');
+        await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_TURMA, matriculasTurmasGlobais, 'turma');
         await carregarTodasPlanilhasExcel();
         
-        // Popula o dropdown
         const select = document.getElementById('escolaSelect');
         CONFIG.ESCOLAS.forEach(nome => {
-            if (dadosEscolasCache[nome]) {
-                select.innerHTML += `<option value="${nome}">${nome}</option>`;
-            }
+            if (dadosEscolasCache[nome]) select.innerHTML += `<option value="${nome}">${nome}</option>`;
         });
 
         document.getElementById('loadingOverlay').style.display = 'none';
         setModo('GERAL');
     };
 
-    // --- FUNÇÕES DE CARREGAMENTO (FETCH) ---
     async function fetchAsArrayBuffer(url) {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`Arquivo não encontrado: ${url}`);
         return await resp.arrayBuffer();
     }
 
-    async function carregarMatriculasGerais() {
+    async function carregarMatriculasGerais(url, targetObj, tipo) {
         try {
-            const buffer = await fetchAsArrayBuffer(CONFIG.ARQUIVO_MATRICULAS_REDE);
+            const buffer = await fetchAsArrayBuffer(url);
             const decoder = new TextDecoder('utf-8');
             const csvStr = decoder.decode(buffer);
             const workbook = XLSX.read(csvStr, {type: 'string'});
@@ -177,16 +175,18 @@
             
             jsonData.forEach(row => {
                 const keys = Object.keys(row);
-                let eKey = keys.find(k => k.toLowerCase().includes('escola') || k.toLowerCase().includes('unidade')) || keys[0];
-                let mKey = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('total')) || keys[keys.length - 1];
+                let keyName = keys.find(k => k.toLowerCase().includes(tipo)) || keys[0];
+                let keyMatricula = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('total')) || keys[keys.length - 1];
                 
-                if (row[eKey] && row[mKey]) {
-                    let nomeLimpo = String(row[eKey]).toUpperCase().replace(/\s*-\s*\d+$/, '').trim();
-                    matriculasRede[nomeLimpo] = parseInt(row[mKey]) || 0;
+                if (row[keyName] && row[keyMatricula]) {
+                    let strLimpa = String(row[keyName]).toUpperCase().trim();
+                    if(tipo === 'escola') strLimpa = strLimpa.replace(/\s*-\s*\d+$/, '').trim();
+                    
+                    targetObj[strLimpa] = parseInt(row[keyMatricula]) || 0;
                 }
             });
         } catch(e) {
-            console.warn("Aviso: Arquivo de matrículas gerais (AVARE.csv) não carregado ou ausente.", e);
+            console.warn(`Aviso: Arquivo ${url} não encontrado. Assumindo 100% nas participações relativas.`, e);
         }
     }
 
@@ -209,8 +209,6 @@
                     sheetData.forEach(row => {
                         if (row[classCol] && row["Total de Alunos"]) {
                             turmasData.push(row);
-                            
-                            // Mapeia disciplinas existentes
                             Object.keys(row).forEach(h => {
                                 if (h.includes("Acertos em")) {
                                     const match = h.match(/Acertos em (.*?)\s*\(/);
@@ -220,59 +218,40 @@
                         }
                     });
                 });
-                
-                if (turmasData.length > 0) {
-                    dadosEscolasCache[nomeEscola] = turmasData;
-                }
+                if (turmasData.length > 0) dadosEscolasCache[nomeEscola] = turmasData;
             } catch(e) {
                 console.error(`Falha ao ler Excel de ${nomeEscola}:`, e);
             }
         }
     }
 
-    async function carregarMatriculasTurma(nomeEscola) {
-        if (matriculasTurmasCache[nomeEscola]) return; // Já carregou antes
-        
-        matriculasTurmasCache[nomeEscola] = {};
-        const url = `dados/${nomeEscola}.csv`;
-        
-        try {
-            const buffer = await fetchAsArrayBuffer(url);
-            const decoder = new TextDecoder('utf-8');
-            const csvStr = decoder.decode(buffer);
-            const workbook = XLSX.read(csvStr, {type: 'string'});
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {defval: ""});
-            
-            jsonData.forEach(row => {
-                const keys = Object.keys(row);
-                let tKey = keys.find(k => k.toLowerCase().includes('turma') || k.toLowerCase().includes('sala')) || keys[0];
-                let mKey = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('total')) || keys[keys.length - 1];
-                
-                if (row[tKey] && row[mKey]) {
-                    let turmaLimpa = String(row[tKey]).toUpperCase().trim();
-                    matriculasTurmasCache[nomeEscola][turmaLimpa] = parseInt(row[mKey]) || 0;
-                }
-            });
-        } catch (e) {
-            console.warn(`Aviso: Arquivo de turmas ${nomeEscola}.csv não encontrado. Participação das salas assumirá 100%.`);
-        }
-    }
-
-    // --- LÓGICA DE NAVEGAÇÃO ---
     function setModo(modo) {
         modoAtual = modo;
         document.getElementById('btnTabGeral').classList.toggle('active', modo === 'GERAL');
         document.getElementById('btnTabEscola').classList.toggle('active', modo === 'ESCOLA');
         document.getElementById('escolaControls').style.display = modo === 'ESCOLA' ? 'flex' : 'none';
         
-        if (modo === 'GERAL') {
-            renderizarGeral();
-        } else {
-            renderizarEscola(); // Aciona automaticamente com a primeira escola do select
-        }
+        resetSortAndRender();
     }
 
-    // --- REGRAS DO SEMÁFORO (CONFORME SOLICITADO: <30 Vermelho, >=50 Verde) ---
+    function resetSortAndRender() {
+        currentSortCol = 'nome';
+        currentSortDir = 'asc';
+        if (modoAtual === 'GERAL') processarDadosGeral();
+        else processarDadosEscola();
+    }
+
+    function handleSort(coluna) {
+        if (currentSortCol === coluna) {
+            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortCol = coluna;
+            currentSortDir = 'desc'; // Por padrão, ao clicar num novo numero, mostra os maiores primeiro
+            if(coluna === 'nome') currentSortDir = 'asc';
+        }
+        renderizarTabelaEGratico();
+    }
+
     function getSemaforoClass(pct) {
         if (pct < 0 || isNaN(pct)) return "cell-empty";
         if (pct < 30) return "cell-red";
@@ -282,9 +261,9 @@
 
     function getChartColor(pct) {
         if (pct < 0 || isNaN(pct)) return "#cbd5e1";
-        if (pct < 30) return "#ef4444"; // bg-red-500
-        if (pct >= 50) return "#22c55e"; // bg-green-500
-        return "#eab308"; // bg-yellow-500
+        if (pct < 30) return "#ef4444"; 
+        if (pct >= 50) return "#22c55e"; 
+        return "#eab308"; 
     }
 
     function calcularQtdQuestoes(headerString) {
@@ -293,52 +272,38 @@
         return 1;
     }
 
-    // --- RENDERIZAÇÃO: VISÃO GERAL ---
-    function renderizarGeral() {
-        const discArray = Array.from(disciplinasGlobais).sort();
-        let htmlRows = "";
-        let labels = [];
-        let dataPcts = [];
-        let bgColors = [];
+    // --- PREPARAÇÃO DE DADOS ---
+    let totaisGlobais = {}; // Guarda a linha final de totalização
 
+    function processarDadosGeral() {
+        const discArray = Array.from(disciplinasGlobais).sort();
+        currentData = [];
+        
         let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
         let globDisc = {};
         discArray.forEach(d => globDisc[d] = { acertos: 0, possiveis: 0 });
 
-        const escolasTratadas = Object.keys(dadosEscolasCache).map(nome => {
+        Object.keys(dadosEscolasCache).forEach(nome => {
             const rawData = dadosEscolasCache[nome];
-            let escAlunos = 0;
-            let escAcertos = 0, escPossiveis = 0;
+            let escAlunos = 0, escAcertos = 0, escPossiveis = 0;
             let escDisc = {};
-            discArray.forEach(d => escDisc[d] = { acertos: 0, possiveis: 0 });
-
+            discArray.forEach(d => escDisc[d] = { acertos: 0, possiveis: 0, pct: -1 });
             let turmasContadas = new Set();
 
             rawData.forEach(row => {
                 const turmaNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
                 const pres = parseInt(row["Total de Alunos"]) || 0;
-                
-                if (!turmasContadas.has(turmaNome)) {
-                    escAlunos += pres;
-                    turmasContadas.add(turmaNome);
-                }
+                if (!turmasContadas.has(turmaNome)) { escAlunos += pres; turmasContadas.add(turmaNome); }
 
                 Object.keys(row).forEach(h => {
                     if (h.includes("Acertos em")) {
-                        const match = h.match(/Acertos em (.*?)\s*\(/);
-                        if (match) {
-                            const dNome = match[1].trim();
-                            const acertos = parseInt(row[h]) || 0;
-                            const qCount = calcularQtdQuestoes(h);
-                            const possiveis = pres * qCount;
-
-                            if (escDisc[dNome]) {
-                                escDisc[dNome].acertos += acertos;
-                                escDisc[dNome].possiveis += possiveis;
-                            }
-                            escAcertos += acertos;
-                            escPossiveis += possiveis;
+                        const dNome = h.match(/Acertos em (.*?)\s*\(/)[1].trim();
+                        const acertos = parseInt(row[h]) || 0;
+                        const possiveis = pres * calcularQtdQuestoes(h);
+                        if (escDisc[dNome]) {
+                            escDisc[dNome].acertos += acertos; escDisc[dNome].possiveis += possiveis;
                         }
+                        escAcertos += acertos; escPossiveis += possiveis;
                     }
                 });
             });
@@ -347,174 +312,159 @@
             const pctPart = matrics > 0 ? Math.min((escAlunos / matrics) * 100, 100) : 100;
             const mediaGeral = escPossiveis > 0 ? (escAcertos / escPossiveis) * 100 : -1;
 
-            return { nome, escAlunos, matrics, pctPart, escDisc, mediaGeral, escAcertos, escPossiveis };
+            discArray.forEach(d => {
+                if(escDisc[d].possiveis > 0) escDisc[d].pct = (escDisc[d].acertos / escDisc[d].possiveis) * 100;
+            });
+
+            currentData.push({ nome, escAlunos, matrics, pctPart, escDisc, mediaGeral, escAcertos, escPossiveis });
+            
+            globAlunos += escAlunos; globMatriculas += matrics; globAcertos += escAcertos; globPossiveis += escPossiveis;
+            discArray.forEach(d => { globDisc[d].acertos += escDisc[d].acertos; globDisc[d].possiveis += escDisc[d].possiveis; });
         });
 
-        // Ordena por nome
-        escolasTratadas.sort((a, b) => a.nome.localeCompare(b.nome));
+        totaisGlobais = { globAlunos, globMatriculas, globAcertos, globPossiveis, globDisc, discArray };
+        renderizarTabelaEGratico();
+    }
 
-        escolasTratadas.forEach(e => {
-            globAlunos += e.escAlunos;
-            globMatriculas += e.matrics;
-            globAcertos += e.escAcertos;
-            globPossiveis += e.escPossiveis;
+    function processarDadosEscola() {
+        const nomeEscola = document.getElementById('escolaSelect').value;
+        if (!nomeEscola || !dadosEscolasCache[nomeEscola]) return;
+        
+        const rawData = dadosEscolasCache[nomeEscola];
+        const discArray = Array.from(disciplinasGlobais).sort();
+        currentData = [];
+        let turmasMap = {};
 
+        rawData.forEach(row => {
+            const tNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
+            const pres = parseInt(row["Total de Alunos"]) || 0;
+            
+            if (!turmasMap[tNome]) {
+                turmasMap[tNome] = { pres: pres, acertos: 0, possiveis: 0, escDisc: {} };
+                discArray.forEach(d => turmasMap[tNome].escDisc[d] = { acertos: 0, possiveis: 0, pct: -1 });
+            }
+
+            Object.keys(row).forEach(h => {
+                if (h.includes("Acertos em")) {
+                    const dNome = h.match(/Acertos em (.*?)\s*\(/)[1].trim();
+                    const acertos = parseInt(row[h]) || 0;
+                    const possiveis = pres * calcularQtdQuestoes(h);
+                    if (turmasMap[tNome].escDisc[dNome]) {
+                        turmasMap[tNome].escDisc[dNome].acertos += acertos;
+                        turmasMap[tNome].escDisc[dNome].possiveis += possiveis;
+                    }
+                    turmasMap[tNome].acertos += acertos;
+                    turmasMap[tNome].possiveis += possiveis;
+                }
+            });
+        });
+
+        let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
+        let globDisc = {};
+        discArray.forEach(d => globDisc[d] = { acertos: 0, possiveis: 0 });
+
+        Object.keys(turmasMap).forEach(tNome => {
+            const t = turmasMap[tNome];
+            let mat = matriculasTurmasGlobais[tNome];
+            if (!mat) {
+                const chaveAprx = Object.keys(matriculasTurmasGlobais).find(k => k.includes(tNome) || tNome.includes(k));
+                mat = chaveAprx ? matriculasTurmasGlobais[chaveAprx] : t.pres;
+            }
+
+            const pctPart = mat > 0 ? Math.min((t.pres / mat) * 100, 100) : 100;
+            const mediaGeral = t.possiveis > 0 ? (t.acertos / t.possiveis) * 100 : -1;
+            
+            discArray.forEach(d => { if(t.escDisc[d].possiveis > 0) t.escDisc[d].pct = (t.escDisc[d].acertos / t.escDisc[d].possiveis) * 100; });
+
+            currentData.push({ nome: tNome, escAlunos: t.pres, matrics: mat, pctPart, escDisc: t.escDisc, mediaGeral });
+
+            globAlunos += t.pres; globMatriculas += mat; globAcertos += t.acertos; globPossiveis += t.possiveis;
+            discArray.forEach(d => { globDisc[d].acertos += t.escDisc[d].acertos; globDisc[d].possiveis += t.escDisc[d].possiveis; });
+        });
+
+        totaisGlobais = { globAlunos, globMatriculas, globAcertos, globPossiveis, globDisc, discArray };
+        renderizarTabelaEGratico();
+    }
+
+    function sortArray() {
+        currentData.sort((a, b) => {
+            let valA, valB;
+            if (currentSortCol === 'nome') { valA = a.nome; valB = b.nome; }
+            else if (currentSortCol === 'pres') { valA = a.escAlunos; valB = b.escAlunos; }
+            else if (currentSortCol === 'mat') { valA = a.matrics; valB = b.matrics; }
+            else if (currentSortCol === 'part') { valA = a.pctPart; valB = b.pctPart; }
+            else if (currentSortCol === 'media') { valA = a.mediaGeral; valB = b.mediaGeral; }
+            else { valA = a.escDisc[currentSortCol].pct; valB = b.escDisc[currentSortCol].pct; }
+
+            if (valA === valB) return a.nome.localeCompare(b.nome);
+            if (typeof valA === 'string') return currentSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return currentSortDir === 'asc' ? valA - valB : valB - valA;
+        });
+    }
+
+    function renderHeaderCell(key, label, width = "auto") {
+        const icone = currentSortCol === key ? (currentSortDir === 'asc' ? '▲' : '▼') : '↕';
+        const activeClass = currentSortCol === key ? 'th-active' : '';
+        return `<th style="min-width: ${width};" class="${activeClass}" onclick="handleSort('${key}')" title="Clique para ordenar por ${label}">
+                    ${label} <span class="sort-icon">${icone}</span>
+                </th>`;
+    }
+
+    function renderizarTabelaEGratico() {
+        sortArray();
+        const dArr = totaisGlobais.discArray;
+        let htmlRows = "";
+        let labels = [], dataPcts = [], bgColors = [];
+
+        currentData.forEach(e => {
             htmlRows += `<tr>
                 <td class="col-text">${e.nome}</td>
                 <td>${e.escAlunos}</td>
                 <td>${e.matrics === e.escAlunos ? "-" : e.matrics}</td>
                 <td class="cell-blue">${e.pctPart.toFixed(1).replace('.',',')}%</td>`;
 
-            discArray.forEach(d => {
-                globDisc[d].acertos += e.escDisc[d].acertos;
-                globDisc[d].possiveis += e.escDisc[d].possiveis;
-                
-                const pct = e.escDisc[d].possiveis > 0 ? (e.escDisc[d].acertos / e.escDisc[d].possiveis) * 100 : -1;
+            dArr.forEach(d => {
+                const pct = e.escDisc[d].pct;
                 htmlRows += `<td class="${getSemaforoClass(pct)}">${pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%"}</td>`;
             });
 
             htmlRows += `<td class="col-total ${getSemaforoClass(e.mediaGeral)}">${e.mediaGeral === -1 ? "-" : e.mediaGeral.toFixed(1).replace('.',',')+"%"}</td></tr>`;
             
-            // Dados para o Gráfico
-            labels.push(e.nome.split(' ').slice(0,2).join(' ')); // Encurta nome p/ grafico
+            labels.push(modoAtual === 'GERAL' ? e.nome.split(' ').slice(0,2).join(' ') : e.nome.replace(/(INTEGRAL|MANHA|TARDE|ANUAL|T1|T2|7H|9H|\-|\d{8,})/g, '').trim().substring(0,12));
             dataPcts.push(e.mediaGeral > -1 ? e.mediaGeral.toFixed(1) : 0);
             bgColors.push(getChartColor(e.mediaGeral));
         });
 
-        // Cabeçalho da Tabela
+        const labelMain = modoAtual === 'GERAL' ? 'Escola' : 'Turma/Sala';
         let headerHtml = `<table class="data-table"><thead><tr>
-            <th style="min-width: 250px;">Escola</th>
-            <th>Alunos<br>(Presentes)</th>
-            <th>Total<br>Matric.</th>
-            <th>Particip.<br>(%)</th>`;
-        discArray.forEach(d => headerHtml += `<th>${d}</th>`);
-        headerHtml += `<th>Média<br>Geral</th></tr></thead><tbody>`;
+            ${renderHeaderCell('nome', labelMain, '250px')}
+            ${renderHeaderCell('pres', 'Alunos<br>(Presentes)')}
+            ${renderHeaderCell('mat', 'Total<br>Matric.')}
+            ${renderHeaderCell('part', 'Particip.<br>(%)')}
+        `;
+        dArr.forEach(d => headerHtml += renderHeaderCell(d, d));
+        headerHtml += `${renderHeaderCell('media', 'Média<br>Geral')}</tr></thead><tbody>`;
 
-        // Linha Totalizadora
-        let tPart = globMatriculas > 0 ? (globAlunos / globMatriculas) * 100 : 0;
-        let tMedia = globPossiveis > 0 ? (globAcertos / globPossiveis) * 100 : -1;
-        let totalRow = `<tr class="row-total">
-            <td class="col-text">MÉDIA GLOBAL DA REDE</td>
-            <td>${globAlunos}</td><td>${globMatriculas}</td><td class="cell-blue">${tPart.toFixed(1).replace('.',',')}%</td>`;
+        const tg = totaisGlobais;
+        let tPart = tg.globMatriculas > 0 ? Math.min((tg.globAlunos / tg.globMatriculas) * 100, 100) : 0;
+        let tMedia = tg.globPossiveis > 0 ? (tg.globAcertos / tg.globPossiveis) * 100 : -1;
         
-        discArray.forEach(d => {
-            const pct = globDisc[d].possiveis > 0 ? (globDisc[d].acertos / globDisc[d].possiveis) * 100 : -1;
+        let totalRow = `<tr class="row-total">
+            <td class="col-text">MÉDIA GLOBAL - ${modoAtual === 'GERAL' ? 'REDE' : 'UNIDADE'}</td>
+            <td>${tg.globAlunos}</td><td>${tg.globMatriculas}</td><td class="cell-blue">${tPart.toFixed(1).replace('.',',')}%</td>`;
+        
+        dArr.forEach(d => {
+            const pct = tg.globDisc[d].possiveis > 0 ? (tg.globDisc[d].acertos / tg.globDisc[d].possiveis) * 100 : -1;
             totalRow += `<td class="${getSemaforoClass(pct)}">${pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%"}</td>`;
         });
         totalRow += `<td class="col-total ${getSemaforoClass(tMedia)}">${tMedia === -1 ? "-" : tMedia.toFixed(1).replace('.',',')+"%"}</td></tr>`;
 
         document.getElementById('tabelaArea').innerHTML = headerHtml + totalRow + htmlRows + `</tbody></table>`;
-        desenharGrafico(labels, dataPcts, bgColors, "Média Geral por Escola (%)");
+        
+        const title = modoAtual === 'GERAL' ? "Média Geral por Escola (%)" : `Média Geral por Turma - ${document.getElementById('escolaSelect').value}`;
+        desenharGrafico(labels, dataPcts, bgColors, title);
     }
 
-    // --- RENDERIZAÇÃO: VISÃO POR ESCOLA (TURMAS) ---
-    async function renderizarEscola() {
-        const nomeEscola = document.getElementById('escolaSelect').value;
-        if (!nomeEscola || !dadosEscolasCache[nomeEscola]) return;
-        
-        await carregarMatriculasTurma(nomeEscola);
-        const matsTurma = matriculasTurmasCache[nomeEscola] || {};
-
-        const rawData = dadosEscolasCache[nomeEscola];
-        const discArray = Array.from(disciplinasGlobais).sort();
-        
-        let turmasMap = {};
-
-        // Agrupa por Turma
-        rawData.forEach(row => {
-            const tNome = String(row[Object.keys(row)[0]]).toUpperCase().trim();
-            const pres = parseInt(row["Total de Alunos"]) || 0;
-            
-            if (!turmasMap[tNome]) {
-                turmasMap[tNome] = { pres: pres, acertos: 0, possiveis: 0, disc: {} };
-                discArray.forEach(d => turmasMap[tNome].disc[d] = { acertos: 0, possiveis: 0 });
-            }
-
-            Object.keys(row).forEach(h => {
-                if (h.includes("Acertos em")) {
-                    const match = h.match(/Acertos em (.*?)\s*\(/);
-                    if (match) {
-                        const dNome = match[1].trim();
-                        const acertos = parseInt(row[h]) || 0;
-                        const possiveis = pres * calcularQtdQuestoes(h);
-
-                        if (turmasMap[tNome].disc[dNome]) {
-                            turmasMap[tNome].disc[dNome].acertos += acertos;
-                            turmasMap[tNome].disc[dNome].possiveis += possiveis;
-                        }
-                        turmasMap[tNome].acertos += acertos;
-                        turmasMap[tNome].possiveis += possiveis;
-                    }
-                }
-            });
-        });
-
-        let labels = [];
-        let dataPcts = [];
-        let bgColors = [];
-        let htmlRows = "";
-
-        let globAlunos = 0, globMatriculas = 0, globAcertos = 0, globPossiveis = 0;
-        let globDisc = {};
-        discArray.forEach(d => globDisc[d] = { acertos: 0, possiveis: 0 });
-
-        Object.keys(turmasMap).sort().forEach(tNome => {
-            const t = turmasMap[tNome];
-            
-            // Tenta achar a matricula. Fallback parcial, ou igual aos presentes
-            let mat = matsTurma[tNome];
-            if (!mat) {
-                const chaveAprx = Object.keys(matsTurma).find(k => k.includes(tNome) || tNome.includes(k));
-                mat = chaveAprx ? matsTurma[chaveAprx] : t.pres;
-            }
-
-            const pctPart = mat > 0 ? Math.min((t.pres / mat) * 100, 100) : 100;
-            const mediaT = t.possiveis > 0 ? (t.acertos / t.possiveis) * 100 : -1;
-
-            globAlunos += t.pres; globMatriculas += mat; globAcertos += t.acertos; globPossiveis += t.possiveis;
-
-            htmlRows += `<tr>
-                <td class="col-text">${tNome}</td>
-                <td>${t.pres}</td><td>${mat === t.pres ? "-" : mat}</td>
-                <td class="cell-blue">${pctPart.toFixed(1).replace('.',',')}%</td>`;
-
-            discArray.forEach(d => {
-                globDisc[d].acertos += t.disc[d].acertos;
-                globDisc[d].possiveis += t.disc[d].possiveis;
-                const pct = t.disc[d].possiveis > 0 ? (t.disc[d].acertos / t.disc[d].possiveis) * 100 : -1;
-                htmlRows += `<td class="${getSemaforoClass(pct)}">${pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%"}</td>`;
-            });
-
-            htmlRows += `<td class="col-total ${getSemaforoClass(mediaT)}">${mediaT === -1 ? "-" : mediaT.toFixed(1).replace('.',',')+"%"}</td></tr>`;
-
-            // Encurta nome da turma para grafico (Ex: tira "INTEGRAL 7H")
-            labels.push(tNome.replace(/(INTEGRAL|MANHA|TARDE|ANUAL|T1|T2|7H|9H|\-|\d{8,})/g, '').trim().substring(0,12));
-            dataPcts.push(mediaT > -1 ? mediaT.toFixed(1) : 0);
-            bgColors.push(getChartColor(mediaT));
-        });
-
-        let headerHtml = `<table class="data-table"><thead><tr>
-            <th style="min-width: 250px;">Turma/Sala</th>
-            <th>Alunos<br>(Presentes)</th><th>Total<br>Matric.</th><th>Particip.<br>(%)</th>`;
-        discArray.forEach(d => headerHtml += `<th>${d}</th>`);
-        headerHtml += `<th>Média<br>Turma</th></tr></thead><tbody>`;
-
-        let tPart = globMatriculas > 0 ? (globAlunos / globMatriculas) * 100 : 0;
-        let tMedia = globPossiveis > 0 ? (globAcertos / globPossiveis) * 100 : -1;
-        let totalRow = `<tr class="row-total">
-            <td class="col-text">TOTAL DA UNIDADE</td>
-            <td>${globAlunos}</td><td>${globMatriculas}</td><td class="cell-blue">${tPart.toFixed(1).replace('.',',')}%</td>`;
-        discArray.forEach(d => {
-            const pct = globDisc[d].possiveis > 0 ? (globDisc[d].acertos / globDisc[d].possiveis) * 100 : -1;
-            totalRow += `<td class="${getSemaforoClass(pct)}">${pct === -1 ? "-" : pct.toFixed(1).replace('.',',')+"%"}</td>`;
-        });
-        totalRow += `<td class="col-total ${getSemaforoClass(tMedia)}">${tMedia === -1 ? "-" : tMedia.toFixed(1).replace('.',',')+"%"}</td></tr>`;
-
-        document.getElementById('tabelaArea').innerHTML = headerHtml + totalRow + htmlRows + `</tbody></table>`;
-        desenharGrafico(labels, dataPcts, bgColors, `Média Geral por Turma - ${nomeEscola}`);
-    }
-
-    // --- GRÁFICO (CHART.JS) ---
     function desenharGrafico(labels, data, colors, title) {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
@@ -525,7 +475,7 @@
                 labels: labels,
                 datasets: [
                     { type: 'line', label: 'Meta Ideal (50%)', data: Array(labels.length).fill(50), borderColor: '#15803d', borderWidth: 2, borderDash: [5, 5], fill: false, pointRadius: 0 },
-                    { type: 'line', label: 'Alerta Vermelho (30%)', data: Array(labels.length).fill(30), borderColor: '#b91c1c', borderWidth: 1, borderDash: [2, 2], fill: false, pointRadius: 0 },
+                    { type: 'line', label: 'Atenção Crítica (30%)', data: Array(labels.length).fill(30), borderColor: '#b91c1c', borderWidth: 1, borderDash: [2, 2], fill: false, pointRadius: 0 },
                     { type: 'bar', label: title, data: data, backgroundColor: colors, borderRadius: 4 }
                 ]
             },
