@@ -13,9 +13,9 @@
             --primary: #0f172a; --secondary: #334155; --accent: #3b82f6; --bg: #f8fafc; --border: #e2e8f0;
             
             /* Tons Vivos de Semáforo */
-            --red-vivid: #dc2626;    /* Vermelho Vivo */
-            --yellow-vivid: #facc15; /* Amarelo Vivo */
-            --green-vivid: #16a34a;  /* Verde Vivo */
+            --red-vivid: #dc2626;    
+            --yellow-vivid: #facc15; 
+            --green-vivid: #16a34a;  
             
             --red-text: white;
             --yellow-text: black;
@@ -26,7 +26,6 @@
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--primary); }
         .dashboard-container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); min-height: 80vh; }
         
-        /* Cabeçalho com Logo e Botão */
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; gap: 20px;}
         .header-left { display: flex; align-items: center; gap: 15px; }
         .logo-img { height: 60px; width: auto; object-fit: contain; }
@@ -38,7 +37,6 @@
         .tab-btn:hover { background: #e2e8f0; }
         .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-        /* Botão Imprimir */
         .btn-print { background-color: var(--secondary); color: white;}
         .btn-print:hover { background-color: var(--primary); }
 
@@ -50,20 +48,17 @@
         
         .data-table th, .data-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 3px; text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         
-        /* Cabeçalhos Clicáveis */
         .data-table thead th { background: var(--primary); color: white; font-weight: 600; padding: 12px 3px; white-space: normal; cursor: pointer; user-select: none; transition: background 0.2s; }
         .data-table thead th:hover { background: #1e293b; }
         .sort-icon { display: inline-block; margin-left: 3px; font-size: 10px; color: #94a3b8; }
         .th-active { background: var(--accent) !important; }
         .th-active .sort-icon { color: white; }
 
-        /* Estilos Colunas */
         .col-clas { width: 60px; font-weight: 700; color: var(--secondary); background: #f1f5f9;}
         .col-text { text-align: left !important; font-weight: 600; background: #f8fafc; white-space: normal !important; width: 180px; }
         .col-total { font-weight: 700; border-left: 2px solid #94a3b8 !important; }
         .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; cursor: default; }
 
-        /* Semáforo VIVO */
         .cell-red { background-color: var(--red-vivid) !important; color: var(--red-text) !important; font-weight: 700; }
         .cell-yellow { background-color: var(--yellow-vivid) !important; color: var(--yellow-text) !important; font-weight: 700; }
         .cell-green { background-color: var(--green-vivid) !important; color: var(--green-text) !important; font-weight: 700; }
@@ -75,12 +70,11 @@
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.95); z-index: 1000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--primary);
+            justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--primary); text-align: center;
         }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* ESTILOS DE IMPRESSÃO */
         @media print {
             @page { size: landscape; margin: 10mm; }
             body { background: white; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -99,124 +93,21 @@
 <body>
 
 <div id="loadingOverlay">
-    <div class="spinner"></div>
-    <div id="loadingText">Sincronizando Base de Dados...```html
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Analítico AVAP</title>
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
-    <script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
-    <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)');
-
-        :root {
-            --primary: #0f172a; --secondary: #334155; --accent: #3b82f6; --bg: #f8fafc; --border: #e2e8f0;
-            
-            /* Tons Vivos de Semáforo */
-            --red-vivid: #dc2626;    /* Vermelho Vivo */
-            --yellow-vivid: #facc15; /* Amarelo Vivo */
-            --green-vivid: #16a34a;  /* Verde Vivo */
-            
-            --red-text: white;
-            --yellow-text: black;
-            --green-text: white;
-            --blue-bg: #e0f2fe; --blue-text: #0369a1;
-        }
-
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--primary); }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); min-height: 80vh; }
-        
-        /* Cabeçalho com Logo e Botão */
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; gap: 20px;}
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .logo-img { height: 60px; width: auto; object-fit: contain; }
-        .header-text h1 { margin: 0; font-size: 24px; color: var(--primary); }
-        .header-text p { margin: 4px 0 0 0; font-size: 14px; color: var(--secondary); }
-
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: 1px solid var(--border); background: #f1f5f9; border-radius: 6px; font-weight: 600; font-size: 14px; color: var(--secondary); transition: all 0.2s; text-decoration: none;}
-        .tab-btn:hover { background: #e2e8f0; }
-        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-        /* Botão Imprimir */
-        .btn-print { background-color: var(--secondary); color: white;}
-        .btn-print:hover { background-color: var(--primary); }
-
-        .controls { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .controls select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'Inter'; font-size: 14px; min-width: 250px; outline: none; cursor: pointer; }
-
-        .table-wrapper { overflow-x: auto; margin-bottom: 30px; border-radius: 8px; border: 1px solid var(--border); }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; min-width: 1000px;}
-        
-        .data-table th, .data-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 3px; text-align: center; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-        
-        /* Cabeçalhos Clicáveis */
-        .data-table thead th { background: var(--primary); color: white; font-weight: 600; padding: 12px 3px; white-space: normal; cursor: pointer; user-select: none; transition: background 0.2s; }
-        .data-table thead th:hover { background: #1e293b; }
-        .sort-icon { display: inline-block; margin-left: 3px; font-size: 10px; color: #94a3b8; }
-        .th-active { background: var(--accent) !important; }
-        .th-active .sort-icon { color: white; }
-
-        /* Estilos Colunas */
-        .col-clas { width: 60px; font-weight: 700; color: var(--secondary); background: #f1f5f9;}
-        .col-text { text-align: left !important; font-weight: 600; background: #f8fafc; white-space: normal !important; width: 180px; }
-        .col-total { font-weight: 700; border-left: 2px solid #94a3b8 !important; }
-        .row-total td { border-top: 2px solid var(--primary); font-weight: 700; background: #f1f5f9; cursor: default; }
-
-        /* Semáforo VIVO */
-        .cell-red { background-color: var(--red-vivid) !important; color: var(--red-text) !important; font-weight: 700; }
-        .cell-yellow { background-color: var(--yellow-vivid) !important; color: var(--yellow-text) !important; font-weight: 700; }
-        .cell-green { background-color: var(--green-vivid) !important; color: var(--green-text) !important; font-weight: 700; }
-        .cell-blue { background: var(--blue-bg) !important; color: var(--blue-text) !important; font-weight: 700; }
-        .cell-empty { background: #f8fafc; color: #cbd5e1; }
-
-        .chart-container { position: relative; height: 400px; width: 100%; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
-
-        #loadingOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95); z-index: 1000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-size: 18px; font-weight: 600; color: var(--primary);
-        }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* ESTILOS DE IMPRESSÃO */
-        @media print {
-            @page { size: landscape; margin: 10mm; }
-            body { background: white; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .no-print { display: none !important; }
-            .dashboard-container { box-shadow: none; padding: 0; margin: 0; width: 100%; max-width: none; border: none;}
-            .table-wrapper { border: none; overflow: visible; }
-            .data-table { border: none; min-width: 0; width: 100%;}
-            .data-table th, .data-table td { border: 1px solid #ccc; font-size: 10pt; padding: 4px 2px;}
-            .data-table thead th { background: #e2e8f0 !important; color: black !important; }
-            .col-clas { background: #f1f5f9 !important; color: black !important;}
-            .row-total td { background: #f1f5f9 !important; border-top: 2px solid black !important;}
-            .chart-container { page-break-inside: avoid; margin-top: 20px; height: 300px !important;}
-        }
-    </style>
-</head>
-<body>
-
-<div id="loadingOverlay">
-    <div class="spinner"></div>
+    <div class="spinner" id="loadingSpinner"></div>
     <div id="loadingText">Sincronizando Base de Dados...</div>
-    <div id="loadingSubtext" style="font-size: 13px; font-weight: 400; color: var(--secondary); margin-top: 5px;">Aguarde, processando as 24 escolas.</div>
+    <div id="loadingSubtext" style="font-size: 14px; font-weight: 400; color: var(--secondary); margin-top: 10px; max-width: 600px;">Aguarde, conectando com as escolas.</div>
 </div>
 
 <div class="dashboard-container">
     <div class="header">
         <div class="header-left">
-            <img src="imagens/logo-ure-avare-site.png" alt="Logo URE Avaré" class="logo-img no-print">
+            <img src="imagens/logo-ure-avare-site.png" alt="Logo URE Avaré" class="logo-img no-print" onerror="this.style.display='none'">
             <div class="header-text">
                 <h1>Painel Analítico AVAP</h1>
                 <p>Análise de Desempenho e Participação - Clique nos títulos para ordenar</p>
             </div>
         </div>
-        <button class="tab-btn btn-print no-print" onclick="window.print()">🖨️ Imprimir Relatório (Paisagem)</button>
+        <button class="tab-btn btn-print no-print" onclick="window.print()">🖨️ Imprimir (Paisagem)</button>
     </div>
 
     <div class="tabs no-print">
@@ -238,7 +129,7 @@
 
 <script>
     // =====================================================================
-    // CONFIGURAÇÃO DOS ARQUIVOS (PASTA 'dados/' E 'imagens/' NO GITHUB)
+    // CONFIGURAÇÃO DOS ARQUIVOS (PASTA 'dados/' NO GITHUB)
     // =====================================================================
     const CONFIG = {
         ARQUIVO_MATRICULAS_REDE: "dados/AVARE.xlsx",    
@@ -279,13 +170,20 @@
     let modoAtual = 'GERAL';
     let chartInstance = null;
     
-    // Estado de Ordenação Default (Média Geral Decrescente)
     let currentSortCol = 'media'; 
     let currentSortDir = 'desc';  
     let currentData = [];        
     let totaisGlobais = {}; 
 
     window.onload = async () => {
+        // VERIFICAÇÃO DE SEGURANÇA LOCAL
+        if (window.location.protocol === 'file:') {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingText').innerText = "Acesso Local Bloqueado pelo Navegador";
+            document.getElementById('loadingSubtext').innerHTML = "<span style='color:#dc2626; font-weight:bold;'>Erro:</span> Você abriu o arquivo index.html dando dois cliques no computador.<br>Para ler os arquivos Excel, você <b>precisa subir esta pasta para o GitHub Pages</b> ou usar um Servidor Local (ex: extensão Live Server do VSCode).";
+            return;
+        }
+
         try {
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_REDE, matriculasRede, 'escola');
             await carregarMatriculasGerais(CONFIG.ARQUIVO_MATRICULAS_TURMA, matriculasTurmasGlobais, 'turma');
@@ -299,8 +197,9 @@
             document.getElementById('loadingOverlay').style.display = 'none';
             setModo('GERAL');
         } catch (e) {
-            document.getElementById('loadingText').innerText = "Erro ao carregar dados.";
-            document.getElementById('loadingSubtext').innerText = "Verifique se os arquivos estão na pasta 'dados/' e se o logo está em 'imagens/'.";
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('loadingText').innerText = "Erro Crítico ao carregar dados";
+            document.getElementById('loadingSubtext').innerText = "Verifique se os arquivos Excel estão exatamente dentro da pasta 'dados/' com os nomes corretos.";
             console.error(e);
         }
     };
@@ -314,23 +213,27 @@
     async function carregarMatriculasGerais(url, targetObj, tipo) {
         try {
             const buffer = await fetchAsArrayBuffer(url);
-            const workbook = XLSX.read(buffer, {type: 'array'});
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {defval: ""});
+            // Uso correto para leitura binária de XLSX
+            const workbook = XLSX.read(new Uint8Array(buffer), {type: 'array'});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(sheet, {defval: ""});
             
             jsonData.forEach(row => {
                 const keys = Object.keys(row);
+                // Procura cabeçalho que pareça com "escola" ou "turma"
                 let keyName = keys.find(k => k.toLowerCase().includes(tipo)) || keys[0];
+                // Procura cabeçalho de matrícula
                 let keyMatricula = keys.find(k => k.toLowerCase().includes('matricula') || k.toLowerCase().includes('total')) || keys[keys.length - 1];
                 
                 if (row[keyName] && row[keyMatricula]) {
                     let strLimpa = String(row[keyName]).toUpperCase().trim();
-                    if(tipo === 'escola') strLimpa = strLimpa.replace(/\s*-\s*\d+$/, '').trim();
+                    if (tipo === 'escola') strLimpa = strLimpa.replace(/\s*-\s*\d+$/, '').trim(); // Remove códigos no fim
                     
                     targetObj[strLimpa] = parseInt(row[keyMatricula]) || 0;
                 }
             });
         } catch(e) {
-            console.warn(`Aviso: Arquivo de matrículas ${url} não encontrado. Assumindo presentes como matriculados.`, e);
+            console.warn(`Arquivo de matrículas [${url}] falhou. A participação será 100%.`, e);
         }
     }
 
@@ -342,7 +245,7 @@
             
             try {
                 const buffer = await fetchAsArrayBuffer(url);
-                const workbook = XLSX.read(buffer, {type: 'array'});
+                const workbook = XLSX.read(new Uint8Array(buffer), {type: 'array'});
                 let turmasData = [];
 
                 workbook.SheetNames.forEach(sheetName => {
@@ -379,7 +282,6 @@
     }
 
     function resetSortAndRender() {
-        // Reseta para Média Geral Decrescente ao trocar de modo
         currentSortCol = 'media';
         currentSortDir = 'desc';
         if (modoAtual === 'GERAL') processarDadosGeral();
@@ -391,13 +293,12 @@
             currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
         } else {
             currentSortCol = coluna;
-            currentSortDir = 'desc'; // Padrão desc p/ números
-            if(coluna === 'nome') currentSortDir = 'asc'; // Padrão asc p/ nome
+            currentSortDir = 'desc'; 
+            if(coluna === 'nome') currentSortDir = 'asc'; 
         }
         renderizarTabelaEGratico();
     }
 
-    // --- REGRAS DO SEMÁFORO (CONFORME SOLICITADO VIVO: <30 Vermelho, >=50 Verde) ---
     function getSemaforoClass(pct) {
         if (pct < 0 || isNaN(pct)) return "cell-empty";
         if (pct < 30) return "cell-red";
@@ -407,9 +308,9 @@
 
     function getChartColor(pct) {
         if (pct < 0 || isNaN(pct)) return "#cbd5e1";
-        if (pct < 30) return "#dc2626"; // red-vivid
-        if (pct >= 50) return "#16a34a"; // green-vivid
-        return "#facc15"; // yellow-vivid
+        if (pct < 30) return "#dc2626"; 
+        if (pct >= 50) return "#16a34a"; 
+        return "#facc15"; 
     }
 
     function calcularQtdQuestoes(headerString) {
@@ -418,7 +319,6 @@
         return 1;
     }
 
-    // --- PREPARAÇÃO DE DADOS ---
     function processarDadosGeral() {
         const discArray = Array.from(disciplinasGlobais).sort();
         currentData = [];
@@ -542,7 +442,7 @@
 
             if (valA === valB) return a.nome.localeCompare(b.nome);
             if (typeof valA === 'string') return currentSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            // Trata nulos/vazios na ordenação numerica
+            
             if (valA === -1) return 1; if (valB === -1) return -1;
             return currentSortDir === 'asc' ? valA - valB : valB - valA;
         });
@@ -563,15 +463,11 @@
         let htmlRows = "";
         let labels = [], dataPcts = [], bgColors = [];
 
-        // Lógica de Rank (Tratando empates baseados na coluna de ordenação ativa)
-        let clas = 0;
-        let pVal = null;
-        let pClas = 0;
+        let clas = 0, pVal = null, pClas = 0;
 
         currentData.forEach((e, index) => {
             clas = index + 1;
             
-            // Tratamento de empates para exibição do rank (apenas se não for ordenação por nome)
             if (index > 0 && currentSortCol !== 'nome') {
                 let cVal, pValObj;
                 let prevObj = currentData[index - 1];
@@ -582,14 +478,9 @@
                 else if (currentSortCol === 'media') { cVal = e.mediaGeral; pValObj = prevObj.mediaGeral; }
                 else { cVal = e.escDisc[currentSortCol].pct; pValObj = prevObj.escDisc[currentSortCol].pct; }
 
-                if (cVal === pValObj) {
-                    clas = pClas; // Mantém rank anterior se valor for igual
-                } else {
-                    pClas = clas; // Atualiza rank anterior
-                }
-            } else {
-                pClas = clas;
-            }
+                if (cVal === pValObj) clas = pClas; 
+                else pClas = clas; 
+            } else { pClas = clas; }
 
             htmlRows += `<tr>
                 <td class="col-clas">${currentSortCol === 'nome' ? clas : clas + 'º'}</td>
@@ -605,34 +496,26 @@
 
             htmlRows += `<td class="col-total ${getSemaforoClass(e.mediaGeral)}">${e.mediaGeral === -1 ? "-" : e.mediaGeral.toFixed(1).replace('.',',')+"%"}</td></tr>`;
             
-            // Prepara dados do gráfico baseados na ordenação atual
             labels.push(modoAtual === 'GERAL' ? e.nome.split(' ').slice(0,2).join(' ') : e.nome.replace(/(INTEGRAL|MANHA|TARDE|ANUAL|T1|T2|7H|9H|\-|\d{8,})/g, '').trim().substring(0,12));
             
-            // Se ordenou por disciplina, mostra a nota da disciplina no gráfico
             let chartVal = 0;
-            if (disciplinasGlobais.has(currentSortCol)) {
-                chartVal = e.escDisc[currentSortCol].pct > -1 ? e.escDisc[currentSortCol].pct.toFixed(1) : 0;
-            } else if (currentSortCol === 'part') {
-                chartVal = e.pctPart.toFixed(1);
-            } else {
-                chartVal = e.mediaGeral > -1 ? e.mediaGeral.toFixed(1) : 0;
-            }
+            if (disciplinasGlobais.has(currentSortCol)) chartVal = e.escDisc[currentSortCol].pct > -1 ? e.escDisc[currentSortCol].pct.toFixed(1) : 0;
+            else if (currentSortCol === 'part') chartVal = e.pctPart.toFixed(1);
+            else chartVal = e.mediaGeral > -1 ? e.mediaGeral.toFixed(1) : 0;
             
             dataPcts.push(chartVal);
             
-            // Cor baseada na média geral (padrão solicitado) ou na disciplina se for a ordenação ativa
             let colorVal = e.mediaGeral;
             if (disciplinasGlobais.has(currentSortCol)) colorVal = e.escDisc[currentSortCol].pct;
-            else if (currentSortCol === 'part') colorVal = e.pctPart >= 95 ? 100 : (e.pctPart < 80 ? 0 : 40); // Lógica visual simples p/ part
+            else if (currentSortCol === 'part') colorVal = e.pctPart >= 95 ? 100 : (e.pctPart < 80 ? 0 : 40); 
             
             bgColors.push(getChartColor(colorVal));
         });
 
         const labelMain = modoAtual === 'GERAL' ? 'Escola' : 'Turma/Sala';
-        const labelRankTotal = `/${totalRegistros}`;
         
         let headerHtml = `<table class="data-table"><thead><tr>
-            <th class="col-clas" title="Classificação baseada na ordenação ativa">Clas.<br>${labelRankTotal}</th>
+            <th class="col-clas" title="Classificação">Clas.<br>/${totalRegistros}</th>
             ${renderHeaderCell('nome', labelMain, '180px')}
             ${renderHeaderCell('pres', 'Alunos<br>(Pres.)')}
             ${renderHeaderCell('mat', 'Total<br>Matric.')}
@@ -666,7 +549,6 @@
         desenharGrafico(labels, dataPcts, bgColors, chartTitle);
     }
 
-    // --- GRÁFICO (CHART.JS) ---
     function desenharGrafico(labels, data, colors, title) {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
